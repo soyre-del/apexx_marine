@@ -2,6 +2,7 @@
 session_start();
 include '../assets/includes/header.php';
 ?>
+
 <!-- ABOUT US PAGE CONTENT -->
 
 <!-- 1. Page Header -->
@@ -130,13 +131,15 @@ include '../assets/includes/header.php';
                     </li>
                 </ul>
             </div>
+            
             <div class="col-lg-6">
                 <div class="glass-card p-4 rounded-4 text-center">
-                    <!-- keep the aspect ratio, add the id "global-map" -->
-                    <div id="global-map" style="aspect-ratio: 16/9; width: 100%; border-radius: inherit;" class="border border-secondary border-opacity-25">
+                    <!-- Google Maps Official Container -->
+                    <div id="global-map" style="height: 400px; width: 100%; border-radius: inherit; z-index: 1;" class="border border-secondary border-opacity-25 overflow-hidden">
                     </div>
                 </div>
             </div>
+            
         </div>
     </div>
 </section>
@@ -278,5 +281,11 @@ include '../assets/includes/header.php';
         </div>
     </div>
 </section>
-<script src = "../assets/js/aboutUs.js"></script>
+
+<!-- Official Google Maps JavaScript API Integration -->
+<script src="/apexx_marine/assets/js/aboutUs.js"></script>
+
+<!-- Load Official Google Maps API with your Key -->
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap"></script>
+
 <?php include '../assets/includes/footer.php'; ?>
