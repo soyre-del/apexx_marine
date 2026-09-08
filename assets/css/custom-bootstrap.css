@@ -1,0 +1,390 @@
+/* assets/css/custom-bootstrap.css */
+
+:root {
+    --brand-navy: #0d2a4a;
+    --brand-blue: #2e6b9c;
+    --brand-dark: #081a2e;
+    --brand-steel: #8a9ba8;
+    --brand-ocean: #0ea5e9;
+    --brand-caution: #fbbf24;
+    --brand-iron: #333d4a;
+    --brand-active: #10b981;
+    --font-montserrat: 'Montserrat', sans-serif;
+    --font-cascadia: "Cascadia Code", Consolas, monospace;
+}
+
+body {
+    background-color: var(--brand-navy);
+    color: var(--brand-steel);
+    font-family: var(--font-cascadia);
+    overflow-x: hidden;
+}
+
+/* -----------------------------------
+Typography & Base Colors
+----------------------------------- */
+.font-montserrat { font-family: var(--font-montserrat) !important; }
+.font-cascadia { font-family: var(--font-cascadia) !important; }
+
+/* Text Colors */
+.text-brand-blue { color: var(--brand-blue) !important; }
+.text-brand-caution { color: var(--brand-caution) !important; }
+.text-brand-steel { color: var(--brand-steel) !important; } 
+.text-brand-ocean { color: var(--brand-ocean) !important; }
+
+/* Background Colors */
+.bg-brand-navy { background-color: var(--brand-navy) !important; }
+.bg-brand-dark { background-color: var(--brand-dark) !important; }
+.bg-brand-ocean { background-color: var(--brand-ocean) !important; }
+
+/* Sizing & Spacing */
+.letter-spacing-wide { letter-spacing: 0.1em; }
+.letter-spacing-widest { letter-spacing: 0.2em; }
+.fs-7 { font-size: 0.85rem !important; }
+.py-section { padding-top: 6rem; padding-bottom: 6rem; }
+
+/* -----------------------------------
+   Hero Section
+----------------------------------- */
+.hero-section {
+    position: relative;
+    min-height: 80vh;
+    background-image: url('../images/1st.jpg'); 
+    background-size: cover;
+    background-position: center 70%;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.hero-overlay {
+    background: linear-gradient(to bottom, rgba(13, 42, 74, 0.9), rgba(13, 42, 74, 0.7), var(--brand-navy));
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+}
+
+/* -----------------------------------
+   Glassmorphism & Elements
+----------------------------------- */
+.glass-pill {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    transition: all 0.3s ease;
+}
+
+.glass-card {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    transition: all 0.5s ease;
+}
+.glass-card:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(46, 107, 156, 0.3);
+    transform: translateY(-8px);
+}
+
+.hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease !important;
+}
+.hover-lift:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Glowing Ambient Backgrounds */
+.glow-blob {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+}
+.glow-blob-blue {
+    background-color: rgba(46, 107, 156, 0.1);
+    filter: blur(100px);
+}
+.glow-blob-ocean {
+    background-color: rgba(14, 165, 233, 0.1);
+    filter: blur(120px);
+}
+
+/* -----------------------------------
+   Forms & Buttons
+----------------------------------- */
+.custom-input {
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #ffffff !important; 
+    padding: 0.875rem 1.25rem;
+    transition: all 0.3s ease;
+}
+
+.custom-input::placeholder {
+    color: rgba(255, 255, 255, 0.4) !important; 
+}
+
+.custom-input:focus {
+    background-color: rgba(0, 0, 0, 0.3);
+    border-color: var(--brand-ocean);
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15); 
+    color: #ffffff !important;
+    outline: none;
+}
+
+/* --- Dark Theme Form Inputs (Contact/Login) --- */
+.form-control-dark {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    transition: all 0.3s ease;
+}
+.form-control-dark:focus {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-color: var(--brand-blue) !important;
+    box-shadow: 0 0 0 0.25rem rgba(59, 130, 246, 0.25) !important;
+}
+.form-floating-dark > label {
+    color: rgba(255, 255, 255, 0.5);
+}
+.form-floating-dark > .form-control:focus ~ label,
+.form-floating-dark > .form-control:not(:placeholder-shown) ~ label,
+.form-floating-dark > .form-select:focus ~ label,
+.form-floating-dark > .form-select:not(:empty) ~ label {
+    color: var(--brand-blue);
+    background-color: transparent !important;
+}
+.form-floating-dark .form-select {
+    color: #fff !important;
+}
+.form-floating-dark .form-select option {
+    background-color: var(--brand-navy);
+    color: #fff;
+}
+
+/* Modern Simple Buttons */
+.btn-brand-blue {
+    background-color: var(--brand-blue);
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+    transition: all 0.25s ease;
+}
+.btn-brand-blue:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.25);
+    color: #fff;
+    background-color: #357ab0;
+}
+
+.btn-brand-caution {
+    background-color: var(--brand-caution);
+    color: var(--brand-navy);
+    border: none;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+    transition: all 0.25s ease;
+}
+.btn-brand-caution:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.25);
+    color: var(--brand-navy);
+    background-color: #fcc93d;
+}
+
+.icon-box {
+    width: 3.5rem;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    transition: all 0.4s ease;
+}
+
+.hover-white {
+    transition: color 0.3s ease;
+}
+
+.hover-white:hover {
+    color: #fff !important;
+}
+
+/* -----------------------------------
+   Service Cards (Image + Text)
+----------------------------------- */
+.service-card {
+    background-color: var(--brand-navy);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.25rem;
+    overflow: hidden;
+    transition: all 0.5s ease;
+}
+
+.service-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(46, 107, 156, 0.4);
+    box-shadow: 0 20px 40px -10px rgba(14, 165, 233, 0.15);
+}
+
+.service-card .img-wrapper {
+    position: relative;
+    height: 250px;
+    overflow: hidden;
+}
+
+.service-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.7s ease;
+}
+
+.service-card:hover img {
+    transform: scale(1.08);
+}
+
+.service-card .img-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, var(--brand-navy) 0%, transparent 80%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.service-card .card-body {
+    position: relative;
+    z-index: 2;
+    background-color: var(--brand-navy);
+}
+
+.service-card .learn-more svg {
+    transition: transform 0.3s ease;
+}
+
+.service-card:hover .learn-more svg {
+    transform: translateX(6px);
+}
+
+/* -----------------------------------
+   Advantage Feature List
+----------------------------------- */
+.feature-item {
+    transition: transform 0.4s ease;
+    cursor: default;
+}
+.feature-item:hover {
+    transform: translateX(10px);
+}
+.feature-item:hover .icon-box {
+    background-color: var(--brand-blue) !important;
+    color: #fff !important;
+    border-color: var(--brand-ocean) !important;
+    box-shadow: 0 10px 25px -5px rgba(14, 165, 233, 0.4);
+    transform: scale(1.1);
+}
+
+/* Urgent Checkbox Label Hover */
+.urgent-label:hover {
+    background-color: rgba(251, 191, 36, 0.03) !important; 
+    border-color: rgba(251, 191, 36, 0.3) !important; 
+}
+
+/* Navbar Dissolve Effect */
+.navbar-dissolved {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none;
+}
+
+/* Glass Panel (used in Contact page) */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* -----------------------------------
+   Terminal Enlistment Utilities
+   (Added for Register/Login pages)
+----------------------------------- */
+.bg-grid-pattern {
+    background-image: linear-gradient(to right, rgba(138, 155, 168, 0.04) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(138, 155, 168, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+}
+
+.backdrop-blur-2xl {
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+}
+
+.rounded-2rem {
+    border-radius: 2rem !important;
+}
+
+.text-gradient-ocean {
+    background: linear-gradient(to right, var(--brand-ocean), var(--brand-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+}
+
+/* Tactical Form Inputs */
+.tactical-input {
+    background-color: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    transition: all 0.3s ease;
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    width: 100%;
+}
+
+.tactical-input:focus {
+    background-color: rgba(0, 0, 0, 0.4);
+    border-color: var(--brand-ocean);
+    box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.15);
+    outline: none;
+}
+
+.tactical-input::placeholder {
+    color: rgba(138, 155, 168, 0.5);
+}
+
+/* Terminal Alerts */
+.alert-terminal-error {
+    background-color: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #f87171;
+    font-size: 0.75rem;
+    border-radius: 0.75rem;
+}
+
+.alert-terminal-success {
+    background-color: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: var(--brand-active);
+    font-size: 0.75rem;
+    border-radius: 0.75rem;
+}
+
+/* Enlistment Button */
+.btn-brand-ocean {
+    background-color: var(--brand-ocean);
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    letter-spacing: 0.2em;
+}
+
+.btn-brand-ocean:hover {
+    background-color: var(--brand-blue);
+    color: #fff;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px -5px rgba(14, 165, 233, 0.4);
+}
