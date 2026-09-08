@@ -2,7 +2,7 @@
 session_start();
 
 // 1. THE GATEKEEPER: Strict Authorization Check
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+if (empty($_SESSION['user_id']) || empty($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header("Location: /apexx_marine/assets/includes/login.php");
     exit();
 }
@@ -24,7 +24,6 @@ $allowed_specialties = [
     'Hull & Steel Fabricator',
     'Preventative Maintenance Expert',
     'General Marine Consultant'
-    // NOTE: For 'BEE TECH' or 'NEON CLASS' specific engineering, add them here if needed.
 ];
 
 $allowed_statuses = ['available', 'deployed', 'on_leave'];
@@ -61,14 +60,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
             $_SESSION['sys_msg'] = "All personnel fields are required for deployment. Please select a valid discipline.";
             $_SESSION['sys_msg_type'] = "warning";
             $_SESSION['old_post'] = $_POST;
+            $_SESSION['failed_action'] = $action;
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $_SESSION['sys_msg'] = "Invalid email format.";
             $_SESSION['sys_msg_type'] = "warning";
             $_SESSION['old_post'] = $_POST;
+            $_SESSION['failed_action'] = $action;
         } elseif (strlen($password) < 8) {
             $_SESSION['sys_msg'] = "Access Code must be at least 8 characters.";
             $_SESSION['sys_msg_type'] = "warning";
             $_SESSION['old_post'] = $_POST;
+            $_SESSION['failed_action'] = $action;
         } else {
             try {
                 $stmtCheck = $pdo->prepare("SELECT user_id FROM users WHERE email = :email LIMIT 1");
@@ -78,6 +80,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
                     $_SESSION['sys_msg'] = "Registration Halted: Engineer email already exists in the matrix.";
                     $_SESSION['sys_msg_type'] = "danger";
                     $_SESSION['old_post'] = $_POST;
+                    $_SESSION['failed_action'] = $action;
                 } else {
                     $pdo->beginTransaction();
 
@@ -108,6 +111,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
                 $_SESSION['sys_msg'] = "CRITICAL ERROR: Unable to deploy engineer due to a system fault.";
                 $_SESSION['sys_msg_type'] = "danger";
                 $_SESSION['old_post'] = $_POST;
+                $_SESSION['failed_action'] = $action;
             }
         }
     }
@@ -119,7 +123,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
         $id        = (int)($_POST['user_id'] ?? 0);
         $name      = trim($_POST['eng_name'] ?? '');
         $email     = trim($_POST['eng_email'] ?? '');
-        $password  = $_POST['eng_password'] ?? ''; // Optional on edit
+        $password  = $_POST['eng_password'] ?? ''; 
         $specialty = trim($_POST['eng_specialty'] ?? '');
         $status    = $_POST['eng_status'] ?? 'available';
 
@@ -129,12 +133,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
         if (empty($id) || empty($name) || empty($email) || empty($specialty)) {
             $_SESSION['sys_msg'] = "Critical fields missing for profile update.";
             $_SESSION['sys_msg_type'] = "warning";
+            $_SESSION['old_post'] = $_POST;
+            $_SESSION['failed_action'] = $action;
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $_SESSION['sys_msg'] = "Invalid email format provided.";
             $_SESSION['sys_msg_type'] = "warning";
+            $_SESSION['old_post'] = $_POST;
+            $_SESSION['failed_action'] = $action;
         } elseif (!empty($password) && strlen($password) < 8) {
             $_SESSION['sys_msg'] = "New Access Code must be at least 8 characters.";
             $_SESSION['sys_msg_type'] = "warning";
+            $_SESSION['old_post'] = $_POST;
+            $_SESSION['failed_action'] = $action;
         } else {
             try {
                 $stmtCheck = $pdo->prepare("SELECT user_id FROM users WHERE email = :email AND user_id != :id LIMIT 1");
@@ -143,6 +153,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
                 if ($stmtCheck->fetch()) {
                     $_SESSION['sys_msg'] = "Update Halted: Email is already registered to another operative.";
                     $_SESSION['sys_msg_type'] = "danger";
+                    $_SESSION['old_post'] = $_POST;
+                    $_SESSION['failed_action'] = $action;
                 } else {
                     $pdo->beginTransaction();
 
@@ -167,6 +179,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
                 error_log("DB Update Error: " . $e->getMessage());
                 $_SESSION['sys_msg'] = "CRITICAL ERROR: Unable to update profile.";
                 $_SESSION['sys_msg_type'] = "danger";
+                $_SESSION['old_post'] = $_POST;
+                $_SESSION['failed_action'] = $action;
             }
         }
     }
@@ -228,12 +242,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
 // Fetch Flash Messages and Sticky Inputs
 $system_message = $_SESSION['sys_msg'] ?? '';
 $message_type   = $_SESSION['sys_msg_type'] ?? '';
+$failed_action  = $_SESSION['failed_action'] ?? '';
+$old_user_id    = $_SESSION['old_post']['user_id'] ?? '';
 $old_name       = $_SESSION['old_post']['eng_name'] ?? '';
 $old_email      = $_SESSION['old_post']['eng_email'] ?? '';
 $old_specialty  = $_SESSION['old_post']['eng_specialty'] ?? '';
 $old_status     = $_SESSION['old_post']['eng_status'] ?? 'available';
 
-unset($_SESSION['sys_msg'], $_SESSION['sys_msg_type'], $_SESSION['old_post']);
+unset($_SESSION['sys_msg'], $_SESSION['sys_msg_type'], $_SESSION['failed_action'], $_SESSION['old_post']);
 
 // ==========================================
 // DASHBOARD METRICS RETRIEVAL
@@ -319,7 +335,7 @@ try {
                 <div class="vr bg-secondary opacity-25" style="width: 1px; height: 24px;"></div>
                 <div class="d-flex align-items-center gap-3">
                     <span class="text-secondary small font-cascadia">
-                        ID: <strong class="text-white"><?= htmlspecialchars($_SESSION['full_name'] ?? 'Admin'); ?></strong>
+                        ID: <strong class="text-white"><?= htmlspecialchars((string)($_SESSION['full_name'] ?? 'Admin')); ?></strong>
                     </span>
                     <a href="/apexx_marine/assets/includes/logout.php" class="btn btn-sm btn-warning font-montserrat fw-bold text-dark rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-2" title="Terminate Session">
                         <span class="text-uppercase" style="font-size: 11px;">Eject</span>
@@ -337,8 +353,8 @@ try {
                 <p class="text-secondary">Execute administrative overrides, manage personnel, and dispatch resources.</p>
                 
                 <?php if (!empty($system_message)): ?>
-                    <div class="alert alert-<?= htmlspecialchars($message_type); ?> alert-dismissible fade show border-<?= htmlspecialchars($message_type); ?> border-opacity-50 shadow-sm font-cascadia" role="alert" style="background: rgba(var(--bs-<?= htmlspecialchars($message_type); ?>-rgb), 0.1);">
-                        <strong>&gt; SYSTEM_LOG:</strong> <?= htmlspecialchars($system_message); ?>
+                    <div class="alert alert-<?= htmlspecialchars((string)$message_type); ?> alert-dismissible fade show border-<?= htmlspecialchars((string)$message_type); ?> border-opacity-50 shadow-sm font-cascadia" role="alert" style="background: rgba(var(--bs-<?= htmlspecialchars((string)$message_type); ?>-rgb), 0.1);">
+                        <strong>&gt; SYSTEM_LOG:</strong> <?= htmlspecialchars((string)$system_message); ?>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 <?php endif; ?>
@@ -426,9 +442,9 @@ try {
                                 <?php else: ?>
                                     <?php foreach ($engineers_list as $eng): ?>
                                         <tr style="<?= $eng['is_active'] ? '' : 'opacity: 0.5; background: rgba(255,0,0,0.05);' ?>">
-                                            <td class="bg-transparent text-white fw-bold"><?= htmlspecialchars($eng['full_name']); ?></td>
-                                            <td class="bg-transparent text-brand-steel"><?= htmlspecialchars($eng['email']); ?></td>
-                                            <td class="bg-transparent text-info small"><?= htmlspecialchars($eng['specialty']); ?></td>
+                                            <td class="bg-transparent text-white fw-bold"><?= htmlspecialchars((string)$eng['full_name']); ?></td>
+                                            <td class="bg-transparent text-brand-steel"><?= htmlspecialchars((string)$eng['email']); ?></td>
+                                            <td class="bg-transparent text-info small"><?= htmlspecialchars((string)$eng['specialty']); ?></td>
                                             <td class="bg-transparent">
                                                 <?php if (!$eng['is_active']): ?>
                                                     <span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-50 px-2 py-1">SUSPENDED</span>
@@ -448,10 +464,10 @@ try {
                                                     <button type="button" class="btn btn-sm btn-outline-warning font-montserrat fw-bold text-uppercase d-flex align-items-center gap-1 edit-eng-btn" 
                                                         style="font-size: 0.7rem;"
                                                         data-id="<?= htmlspecialchars((string)$eng['user_id'], ENT_QUOTES, 'UTF-8'); ?>"
-                                                        data-name="<?= htmlspecialchars($eng['full_name'], ENT_QUOTES, 'UTF-8'); ?>"
-                                                        data-email="<?= htmlspecialchars($eng['email'], ENT_QUOTES, 'UTF-8'); ?>"
-                                                        data-specialty="<?= htmlspecialchars($eng['specialty'], ENT_QUOTES, 'UTF-8'); ?>"
-                                                        data-status="<?= htmlspecialchars($eng['current_status'], ENT_QUOTES, 'UTF-8'); ?>">
+                                                        data-name="<?= htmlspecialchars((string)$eng['full_name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                        data-email="<?= htmlspecialchars((string)$eng['email'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                        data-specialty="<?= htmlspecialchars((string)$eng['specialty'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                        data-status="<?= htmlspecialchars((string)$eng['current_status'], ENT_QUOTES, 'UTF-8'); ?>">
                                                         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                                         Edit
                                                     </button>
@@ -462,14 +478,14 @@ try {
                                                         <button type="button" class="btn btn-sm btn-outline-danger font-montserrat fw-bold text-uppercase d-flex align-items-center gap-1 delete-eng-btn" 
                                                             style="font-size: 0.7rem;"
                                                             data-id="<?= htmlspecialchars((string)$eng['user_id'], ENT_QUOTES, 'UTF-8'); ?>"
-                                                            data-name="<?= htmlspecialchars($eng['full_name'], ENT_QUOTES, 'UTF-8'); ?>">
+                                                            data-name="<?= htmlspecialchars((string)$eng['full_name'], ENT_QUOTES, 'UTF-8'); ?>">
                                                             <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                                             Delete
                                                         </button>
                                                     <?php else: ?>
                                                         <!-- RESTORE BUTTON (Direct Form Submission) -->
                                                         <form action="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']); ?>" method="POST" class="m-0" onsubmit="return confirm('Restore this engineer to active duty?');">
-                                                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
+                                                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars((string)$_SESSION['csrf_token']); ?>">
                                                             <input type="hidden" name="action" value="restore_engineer">
                                                             <input type="hidden" name="user_id" value="<?= htmlspecialchars((string)$eng['user_id']); ?>">
                                                             <button type="submit" class="btn btn-sm btn-success font-montserrat fw-bold text-uppercase d-flex align-items-center gap-1 text-dark" style="font-size: 0.7rem;">
@@ -506,16 +522,16 @@ try {
                 </div>
                 <div class="modal-body p-4">
                     <form action="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']); ?>" method="POST">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars((string)$_SESSION['csrf_token']); ?>">
                         <input type="hidden" name="action" value="add_engineer">
                         
                         <div class="mb-3">
                             <label class="form-label text-brand-steel small text-uppercase fw-bold letter-spacing-wide">Full Name</label>
-                            <input type="text" name="eng_name" required value="<?= htmlspecialchars($old_name); ?>" class="form-control bg-dark border-secondary text-white shadow-none" placeholder="Operative Designation">
+                            <input type="text" name="eng_name" required value="<?= htmlspecialchars((string)$old_name); ?>" class="form-control bg-dark border-secondary text-white shadow-none" placeholder="Operative Designation">
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-brand-steel small text-uppercase fw-bold letter-spacing-wide">Secure Email</label>
-                            <input type="email" name="eng_email" required value="<?= htmlspecialchars($old_email); ?>" class="form-control bg-dark border-secondary text-white shadow-none" placeholder="engineer@apexmarine.com">
+                            <input type="email" name="eng_email" required value="<?= htmlspecialchars((string)$old_email); ?>" class="form-control bg-dark border-secondary text-white shadow-none" placeholder="engineer@apexmarine.com">
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-brand-steel small text-uppercase fw-bold letter-spacing-wide">Access Code (Password)</label>
@@ -526,7 +542,7 @@ try {
                             <select name="eng_specialty" required class="form-select bg-dark border-secondary text-white shadow-none">
                                 <option value="" style="background-color: #0d1b2a; color: #a9b3c1;" <?= empty($old_specialty) ? 'selected' : ''; ?> disabled>Assign Role...</option>
                                 <?php foreach ($allowed_specialties as $spec): ?>
-                                    <option value="<?= htmlspecialchars($spec); ?>" style="background-color: #0d1b2a; color: #ffffff;" <?= $old_specialty === $spec ? 'selected' : ''; ?>><?= htmlspecialchars($spec); ?></option>
+                                    <option value="<?= htmlspecialchars((string)$spec); ?>" style="background-color: #0d1b2a; color: #ffffff;" <?= $old_specialty === $spec ? 'selected' : ''; ?>><?= htmlspecialchars((string)$spec); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -558,7 +574,7 @@ try {
                 </div>
                 <div class="modal-body p-4">
                     <form action="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']); ?>" method="POST">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars((string)$_SESSION['csrf_token']); ?>">
                         <input type="hidden" name="action" value="edit_engineer">
                         <input type="hidden" name="user_id" id="edit_user_id">
                         
@@ -578,7 +594,7 @@ try {
                             <label class="form-label text-brand-steel small text-uppercase fw-bold letter-spacing-wide">Technical Discipline</label>
                             <select name="eng_specialty" id="edit_eng_specialty" required class="form-select bg-dark border-secondary text-white shadow-none">
                                 <?php foreach ($allowed_specialties as $spec): ?>
-                                    <option value="<?= htmlspecialchars($spec); ?>" style="background-color: #0d1b2a; color: #ffffff;"><?= htmlspecialchars($spec); ?></option>
+                                    <option value="<?= htmlspecialchars((string)$spec); ?>" style="background-color: #0d1b2a; color: #ffffff;"><?= htmlspecialchars((string)$spec); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -607,7 +623,7 @@ try {
                     <p class="text-secondary small mb-4">This will deactivate <strong id="delete_eng_name_display" class="text-white"></strong>'s account and set their status to 'On Leave'.</p>
                     
                     <form action="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']); ?>" method="POST" class="d-flex gap-2 justify-content-center">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars((string)$_SESSION['csrf_token']); ?>">
                         <input type="hidden" name="action" value="delete_engineer">
                         <input type="hidden" name="user_id" id="delete_user_id">
                         
@@ -632,10 +648,21 @@ try {
     <!-- Handle Dynamic Modal Data & Auto-open errors -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Auto-open Add modal if there was a form error
-            <?php if (in_array($message_type, ['warning', 'danger'], true) && (!empty($old_name) || !empty($old_email))): ?>
-                var engModal = new bootstrap.Modal(document.getElementById('addEngineerModal'));
-                engModal.show();
+            // Contextually Auto-open the Correct modal if there was a form error
+            <?php if (in_array($message_type, ['warning', 'danger'], true)): ?>
+                <?php if (($failed_action ?? 'add_engineer') === 'add_engineer' && (!empty($old_name) || !empty($old_email))): ?>
+                    var addModal = new bootstrap.Modal(document.getElementById('addEngineerModal'));
+                    addModal.show();
+                <?php elseif (($failed_action ?? '') === 'edit_engineer'): ?>
+                    document.getElementById('edit_user_id').value = <?= json_encode((string)$old_user_id) ?>;
+                    document.getElementById('edit_eng_name').value = <?= json_encode((string)$old_name) ?>;
+                    document.getElementById('edit_eng_email').value = <?= json_encode((string)$old_email) ?>;
+                    document.getElementById('edit_eng_specialty').value = <?= json_encode((string)$old_specialty) ?>;
+                    document.getElementById('edit_eng_status').value = <?= json_encode((string)$old_status) ?>;
+                    
+                    var editModal = new bootstrap.Modal(document.getElementById('editEngineerModal'));
+                    editModal.show();
+                <?php endif; ?>
             <?php endif; ?>
 
             // Populate Edit Modal Data

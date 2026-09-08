@@ -286,6 +286,7 @@ include '../assets/includes/header.php';
 <script src="/apexx_marine/assets/js/aboutUs.js"></script>
 
 <!-- Load Official Google Maps API with your Key -->
-<script async defer src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <?php include '../assets/includes/footer.php'; ?>
