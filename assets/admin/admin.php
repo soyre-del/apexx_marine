@@ -43,19 +43,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
 
     $action = $_POST['action'];
 
-    // ---------------------------------------------------------
-    // CREATE: Add New Engineer
+// ---------------------------------------------------------
+    // CREATE: Deploy New Engineer
     // ---------------------------------------------------------
     if ($action === 'add_engineer') {
         $name      = trim($_POST['eng_name'] ?? '');
         $email     = trim($_POST['eng_email'] ?? '');
-        $password  = $_POST['eng_password'] ?? '';
+        $password  = $_POST['eng_password'] ?? ''; // Never trim passwords
         $specialty = trim($_POST['eng_specialty'] ?? '');
         $status    = $_POST['eng_status'] ?? 'available';
 
+        // Validate Enums
         if (!in_array($status, $allowed_statuses, true)) $status = 'available';
         if (!in_array($specialty, $allowed_specialties, true)) $specialty = ''; 
 
+        // Validation Checks
         if (empty($name) || empty($email) || empty($password) || empty($specialty)) {
             $_SESSION['sys_msg'] = "All personnel fields are required for deployment. Please select a valid discipline.";
             $_SESSION['sys_msg_type'] = "warning";
@@ -73,6 +75,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
             $_SESSION['failed_action'] = $action;
         } else {
             try {
+                // Check for duplicate emails
                 $stmtCheck = $pdo->prepare("SELECT user_id FROM users WHERE email = :email LIMIT 1");
                 $stmtCheck->execute([':email' => $email]);
                 
@@ -82,9 +85,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
                     $_SESSION['old_post'] = $_POST;
                     $_SESSION['failed_action'] = $action;
                 } else {
+                    // Execute Database Transaction
                     $pdo->beginTransaction();
 
                     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    
                     $stmt1 = $pdo->prepare("INSERT INTO users (full_name, email, password_hash, role, is_active) VALUES (:name, :email, :pass, 'engineer', 1)");
                     $stmt1->execute([
                         ':name'  => $name,
@@ -123,13 +128,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
         $id        = (int)($_POST['user_id'] ?? 0);
         $name      = trim($_POST['eng_name'] ?? '');
         $email     = trim($_POST['eng_email'] ?? '');
-        $password  = $_POST['eng_password'] ?? ''; 
+        $password  = $_POST['eng_password'] ?? ''; // Password update is optional
         $specialty = trim($_POST['eng_specialty'] ?? '');
         $status    = $_POST['eng_status'] ?? 'available';
 
+        // Validate Enums
         if (!in_array($status, $allowed_statuses, true)) $status = 'available';
         if (!in_array($specialty, $allowed_specialties, true)) $specialty = ''; 
 
+        // Validation Checks
         if (empty($id) || empty($name) || empty($email) || empty($specialty)) {
             $_SESSION['sys_msg'] = "Critical fields missing for profile update.";
             $_SESSION['sys_msg_type'] = "warning";
@@ -147,6 +154,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
             $_SESSION['failed_action'] = $action;
         } else {
             try {
+                // Ensure email isn't being taken by another user
                 $stmtCheck = $pdo->prepare("SELECT user_id FROM users WHERE email = :email AND user_id != :id LIMIT 1");
                 $stmtCheck->execute([':email' => $email, ':id' => $id]);
                 
@@ -156,13 +164,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action'])) {
                     $_SESSION['old_post'] = $_POST;
                     $_SESSION['failed_action'] = $action;
                 } else {
+                    // Execute Database Transaction
                     $pdo->beginTransaction();
 
                     if (!empty($password)) {
+                        // Admin provided a new password -> Update all fields including hash
                         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                         $stmt1 = $pdo->prepare("UPDATE users SET full_name = :name, email = :email, password_hash = :pass WHERE user_id = :id AND role = 'engineer'");
                         $stmt1->execute([':name' => $name, ':email' => $email, ':pass' => $hashed_password, ':id' => $id]);
                     } else {
+                        // Admin left password blank -> Keep old password, update everything else
                         $stmt1 = $pdo->prepare("UPDATE users SET full_name = :name, email = :email WHERE user_id = :id AND role = 'engineer'");
                         $stmt1->execute([':name' => $name, ':email' => $email, ':id' => $id]);
                     }
@@ -509,52 +520,108 @@ try {
 
     </div>
 
-    <!-- 1. ADD ENGINEER MODAL -->
+<!-- 1. ADD ENGINEER MODAL -->
     <div class="modal fade" id="addEngineerModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content glass-card backdrop-blur-2xl border-secondary border-opacity-50 shadow-lg text-white font-cascadia" style="background: rgba(13, 27, 42, 0.95);">
-                <div class="modal-header border-bottom border-secondary border-opacity-25">
-                    <h5 class="modal-title font-montserrat fw-bold text-uppercase text-info d-flex align-items-center gap-2">
+            <div class="modal-content glass-card backdrop-blur-2xl border-secondary border-opacity-25 shadow-lg text-white font-cascadia" style="border-radius: 1.5rem; background: rgba(13, 27, 42, 0.95);">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 px-4 pt-4 pb-3">
+                    <h5 class="modal-title font-montserrat fw-bolder text-uppercase text-brand-ocean d-flex align-items-center gap-2 fs-5">
                         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
                         Deploy New Engineer
                     </h5>
-                    <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white opacity-50 shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <form action="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']); ?>" method="POST">
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars((string)$_SESSION['csrf_token']); ?>">
                         <input type="hidden" name="action" value="add_engineer">
                         
-                        <div class="mb-3">
-                            <label class="form-label text-brand-steel small text-uppercase fw-bold letter-spacing-wide">Full Name</label>
-                            <input type="text" name="eng_name" required value="<?= htmlspecialchars((string)$old_name); ?>" class="form-control bg-dark border-secondary text-white shadow-none" placeholder="Operative Designation">
+                        <div class="mb-4">
+                            <label class="form-label text-brand-steel fw-bold text-uppercase letter-spacing-widest mb-2" style="font-size: 0.65rem;">Full Name</label>
+                            <input type="text" name="eng_name" required value="<?= htmlspecialchars((string)$old_name); ?>" class="form-control custom-input rounded-3 shadow-none" placeholder="Operative Designation">
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label text-brand-steel small text-uppercase fw-bold letter-spacing-wide">Secure Email</label>
-                            <input type="email" name="eng_email" required value="<?= htmlspecialchars((string)$old_email); ?>" class="form-control bg-dark border-secondary text-white shadow-none" placeholder="engineer@apexmarine.com">
+                        <div class="mb-4">
+                            <label class="form-label text-brand-steel fw-bold text-uppercase letter-spacing-widest mb-2" style="font-size: 0.65rem;">Secure Email</label>
+                            <input type="email" name="eng_email" required value="<?= htmlspecialchars((string)$old_email); ?>" class="form-control custom-input rounded-3 shadow-none" placeholder="engineer@apexmarine.com.ph">
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label text-brand-steel small text-uppercase fw-bold letter-spacing-wide">Access Code (Password)</label>
-                            <input type="password" name="eng_password" required minlength="8" class="form-control bg-dark border-secondary text-white shadow-none" placeholder="••••••••">
+                        <div class="mb-4">
+                            <label class="form-label text-brand-steel fw-bold text-uppercase letter-spacing-widest mb-2" style="font-size: 0.65rem;">Access Code (Password)</label>
+                            <input type="password" name="eng_password" required minlength="8" class="form-control custom-input rounded-3 shadow-none" placeholder="••••••••">
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label text-brand-steel small text-uppercase fw-bold letter-spacing-wide">Technical Discipline</label>
-                            <select name="eng_specialty" required class="form-select bg-dark border-secondary text-white shadow-none">
-                                <option value="" style="background-color: #0d1b2a; color: #a9b3c1;" <?= empty($old_specialty) ? 'selected' : ''; ?> disabled>Assign Role...</option>
+                        <div class="mb-4">
+                            <label class="form-label text-brand-steel fw-bold text-uppercase letter-spacing-widest mb-2" style="font-size: 0.65rem;">Technical Discipline</label>
+                            <select name="eng_specialty" required class="form-select custom-input rounded-3 shadow-none">
+                                <option value="" style="background-color: var(--brand-navy);" <?= empty($old_specialty) ? 'selected' : ''; ?> disabled>Assign Role...</option>
                                 <?php foreach ($allowed_specialties as $spec): ?>
-                                    <option value="<?= htmlspecialchars((string)$spec); ?>" style="background-color: #0d1b2a; color: #ffffff;" <?= $old_specialty === $spec ? 'selected' : ''; ?>><?= htmlspecialchars((string)$spec); ?></option>
+                                    <option value="<?= htmlspecialchars((string)$spec); ?>" style="background-color: var(--brand-navy);" <?= $old_specialty === $spec ? 'selected' : ''; ?>><?= htmlspecialchars((string)$spec); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="mb-4">
-                            <label class="form-label text-brand-steel small text-uppercase fw-bold letter-spacing-wide">Initial Status</label>
-                            <select name="eng_status" class="form-select bg-dark border-secondary text-white shadow-none">
-                                <option value="available" style="background-color: #0d1b2a; color: #ffffff;" <?= $old_status === 'available' ? 'selected' : ''; ?>>Available</option>
-                                <option value="deployed" style="background-color: #0d1b2a; color: #ffffff;" <?= $old_status === 'deployed' ? 'selected' : ''; ?>>Deployed</option>
-                                <option value="on_leave" style="background-color: #0d1b2a; color: #ffffff;" <?= $old_status === 'on_leave' ? 'selected' : ''; ?>>On Leave</option>
+                        <div class="mb-5">
+                            <label class="form-label text-brand-steel fw-bold text-uppercase letter-spacing-widest mb-2" style="font-size: 0.65rem;">Initial Status</label>
+                            <select name="eng_status" class="form-select custom-input rounded-3 shadow-none">
+                                <option value="available" style="background-color: var(--brand-navy);" <?= $old_status === 'available' ? 'selected' : ''; ?>>Available</option>
+                                <option value="deployed" style="background-color: var(--brand-navy);" <?= $old_status === 'deployed' ? 'selected' : ''; ?>>Deployed</option>
+                                <option value="on_leave" style="background-color: var(--brand-navy);" <?= $old_status === 'on_leave' ? 'selected' : ''; ?>>On Leave</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-info w-100 py-2 rounded-3 font-montserrat fw-bold text-uppercase shadow-sm text-dark">Initialize Profile</button>
+                        <button type="submit" class="btn btn-brand-blue w-100 py-3 rounded-3 font-montserrat fw-bolder text-uppercase letter-spacing-widest">
+                            Initialize Profile
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. EDIT ENGINEER MODAL -->
+    <div class="modal fade" id="editEngineerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card backdrop-blur-2xl border-secondary border-opacity-25 shadow-lg text-white font-cascadia" style="border-radius: 1.5rem; background: rgba(13, 27, 42, 0.95);">
+                <div class="modal-header border-bottom border-secondary border-opacity-25 px-4 pt-4 pb-3">
+                    <h5 class="modal-title font-montserrat fw-bolder text-uppercase text-brand-caution d-flex align-items-center gap-2 fs-5">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        Edit Engineer Profile
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white opacity-50 shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form action="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']); ?>" method="POST">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars((string)$_SESSION['csrf_token']); ?>">
+                        <input type="hidden" name="action" value="edit_engineer">
+                        <input type="hidden" name="user_id" id="edit_user_id">
+                        
+                        <div class="mb-4">
+                            <label class="form-label text-brand-steel fw-bold text-uppercase letter-spacing-widest mb-2" style="font-size: 0.65rem;">Full Name</label>
+                            <input type="text" name="eng_name" id="edit_eng_name" required class="form-control custom-input rounded-3 shadow-none">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-brand-steel fw-bold text-uppercase letter-spacing-widest mb-2" style="font-size: 0.65rem;">Secure Email</label>
+                            <input type="email" name="eng_email" id="edit_eng_email" required class="form-control custom-input rounded-3 shadow-none">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-brand-steel fw-bold text-uppercase letter-spacing-widest mb-2" style="font-size: 0.65rem;">Update Access Code</label>
+                            <input type="password" name="eng_password" minlength="8" class="form-control custom-input rounded-3 shadow-none" placeholder="Leave blank to keep current code">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-brand-steel fw-bold text-uppercase letter-spacing-widest mb-2" style="font-size: 0.65rem;">Technical Discipline</label>
+                            <select name="eng_specialty" id="edit_eng_specialty" required class="form-select custom-input rounded-3 shadow-none">
+                                <?php foreach ($allowed_specialties as $spec): ?>
+                                    <option value="<?= htmlspecialchars((string)$spec); ?>" style="background-color: var(--brand-navy);"><?= htmlspecialchars((string)$spec); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="mb-5">
+                            <label class="form-label text-brand-steel fw-bold text-uppercase letter-spacing-widest mb-2" style="font-size: 0.65rem;">Current Status</label>
+                            <select name="eng_status" id="edit_eng_status" class="form-select custom-input rounded-3 shadow-none">
+                                <option value="available" style="background-color: var(--brand-navy);">Available</option>
+                                <option value="deployed" style="background-color: var(--brand-navy);">Deployed</option>
+                                <option value="on_leave" style="background-color: var(--brand-navy);">On Leave</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-brand-caution w-100 py-3 rounded-3 font-montserrat fw-bolder text-uppercase letter-spacing-widest">
+                            Update Profile
+                        </button>
                     </form>
                 </div>
             </div>

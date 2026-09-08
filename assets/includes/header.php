@@ -67,32 +67,32 @@ $is_logged_in = isset($_SESSION['user_id']);
                 <!-- DYNAMIC AUTHENTICATION BUTTONS -->
                 <?php if (isset($_SESSION['user_id'])): ?>
                     
-                    <!-- USER IS LOGGED IN: Smart Dashboard Routing -->
-                    <li class="nav-item ms-lg-4 mt-3 mt-lg-0">
-                        <?php if ($_SESSION['role'] === 'client'): ?>
-                            <!-- CLIENT: Track My Vessel -->
-                            <a class="btn btn-warning rounded-3 px-4 py-2 font-montserrat fw-bold text-uppercase text-dark d-inline-flex align-items-center transition-all shadow-sm" href="/apexx_marine/assets/client/status.php">
-                                <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-                                Track My Vessel
-                            </a>
+                <!-- USER IS LOGGED IN: Smart Dashboard Routing -->
+                                    <li class="nav-item ms-lg-4 mt-3 mt-lg-0">
+                                        <?php if ($_SESSION['role'] === 'client'): ?>
+                                            <!-- CLIENT: Track My Vessel -->
+                                            <a class="btn btn-warning rounded-3 px-4 py-2 font-montserrat fw-bold text-uppercase text-dark d-inline-flex align-items-center transition-all shadow-sm" href="/apexx_marine/assets/client/status.php">
+                                                <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                                                Track My Vessel
+                                            </a>
 
-                        <?php elseif ($_SESSION['role'] === 'admin'): ?>
-                            <!-- ADMIN: Command Center -->
-                            <a class="btn btn-danger rounded-3 px-4 py-2 font-montserrat fw-bold text-uppercase d-inline-flex align-items-center transition-all shadow-sm" href="/apexx_marine/assets/admin/admin.php">
-                                <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                                Command Center
-                            </a>
+                                        <?php elseif ($_SESSION['role'] === 'admin'): ?>
+                                            <!-- ADMIN: Command Center -->
+                                            <a class="btn btn-danger rounded-3 px-4 py-2 font-montserrat fw-bold text-uppercase d-inline-flex align-items-center transition-all shadow-sm" href="/apexx_marine/assets/admin/admin.php">
+                                                <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                                                Command Center
+                                            </a>
 
-                        <?php else: ?>
-                            <!-- ENGINEER: Profile Display -->
-                            <span class="nav-link text-info px-3 py-2 font-montserrat fw-bold text-uppercase d-inline-flex align-items-center">
-                                <svg class="me-2 text-brand-ocean" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
-                                </svg>
-                                <?= htmlspecialchars($_SESSION['full_name']); ?>
-                            </span>
-                        <?php endif; ?>
-                    </li>
+                                        <?php else: ?>
+                                            <!-- ENGINEER: Field Dashboard -->
+                                            <a class="btn btn-info rounded-3 px-4 py-2 font-montserrat fw-bold text-uppercase text-dark d-inline-flex align-items-center transition-all shadow-sm" href="/apexx_marine/assets/engineer/eng.php">
+                                                <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
+                                                </svg>
+                                                Field Dashboard
+                                            </a>
+                                        <?php endif; ?>
+                                    </li>
 
                     <li class="nav-item ms-lg-2 mt-3 mt-lg-0">
                         <a class="btn btn-outline-danger rounded-3 px-4 py-2 font-montserrat fw-bold text-uppercase d-inline-flex align-items-center transition-all hover-white border-opacity-50" href="/apexx_marine/assets/includes/logout.php">
