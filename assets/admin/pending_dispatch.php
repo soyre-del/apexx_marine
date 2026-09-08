@@ -268,22 +268,22 @@ try {
                                     
                                     <!-- Secondary Actions: Terminate & Finish -->
                                     <div class="d-flex gap-2">
-                                        <form action="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']); ?>" method="POST" class="w-50 m-0" onsubmit="return confirm('WARNING: Are you sure you want to terminate this request?');">
+                                        <form action="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']); ?>" method="POST" class="w-50 m-0 task-action-form">
                                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
                                             <input type="hidden" name="action" value="update_task_status">
                                             <input type="hidden" name="request_id" value="<?= $req['request_id']; ?>">
                                             <input type="hidden" name="new_status" value="cancelled">
-                                            <button type="submit" class="btn btn-outline-danger w-100 py-1 font-montserrat fw-bold text-uppercase shadow-sm" style="font-size: 0.65rem;">
+                                            <button type="button" class="btn btn-outline-danger w-100 py-1 font-montserrat fw-bold text-uppercase shadow-sm task-action-btn" data-action="terminate" data-vessel="<?= htmlspecialchars($req['vessel_name'], ENT_QUOTES, 'UTF-8'); ?>" style="font-size: 0.65rem;">
                                                 Terminate Task
                                             </button>
                                         </form>
 
-                                        <form action="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']); ?>" method="POST" class="w-50 m-0" onsubmit="return confirm('Confirm this dispatch has been resolved out-of-band?');">
+                                        <form action="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']); ?>" method="POST" class="w-50 m-0 task-action-form">
                                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
                                             <input type="hidden" name="action" value="update_task_status">
                                             <input type="hidden" name="request_id" value="<?= $req['request_id']; ?>">
                                             <input type="hidden" name="new_status" value="resolved">
-                                            <button type="submit" class="btn btn-outline-success w-100 py-1 font-montserrat fw-bold text-uppercase shadow-sm" style="font-size: 0.65rem;">
+                                            <button type="button" class="btn btn-outline-success w-100 py-1 font-montserrat fw-bold text-uppercase shadow-sm task-action-btn" data-action="resolve" data-vessel="<?= htmlspecialchars($req['vessel_name'], ENT_QUOTES, 'UTF-8'); ?>" style="font-size: 0.65rem;">
                                                 Finish / Resolve
                                             </button>
                                         </form>
@@ -341,6 +341,25 @@ try {
         </div>
     </div>
 
+    <!-- TASK ACTION WARNING MODAL -->
+    <div class="modal fade" id="taskActionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card backdrop-blur-2xl border-opacity-50 shadow-lg text-white font-cascadia" id="taskActionContent" style="background: rgba(13, 27, 42, 0.95);">
+                <div class="modal-header border-bottom border-secondary border-opacity-25">
+                    <h5 class="modal-title font-montserrat fw-bold text-uppercase" id="taskActionTitle">Confirm Action</h5>
+                    <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <p id="taskActionMessage" class="mb-4">Are you sure?</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-outline-secondary font-montserrat fw-bold text-uppercase fs-7" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn font-montserrat fw-bold text-uppercase fs-7" id="confirmTaskActionBtn">Proceed</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <style>
         .animation-pulse {
             animation: pulse 1.5s infinite;
@@ -362,6 +381,57 @@ try {
             var assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
             assignModal.show();
         }
+
+        let pendingTaskForm = null;
+        let taskActionModalInstance = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (document.getElementById('taskActionModal')) {
+                taskActionModalInstance = new bootstrap.Modal(document.getElementById('taskActionModal'));
+            }
+
+            const taskButtons = document.querySelectorAll('.task-action-btn');
+            taskButtons.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    pendingTaskForm = this.closest('form');
+                    const actionType = this.getAttribute('data-action');
+                    const vesselName = this.getAttribute('data-vessel');
+                    
+                    const titleEl = document.getElementById('taskActionTitle');
+                    const msgEl = document.getElementById('taskActionMessage');
+                    const confirmBtn = document.getElementById('confirmTaskActionBtn');
+                    const modalContent = document.getElementById('taskActionContent');
+
+                    if (actionType === 'terminate') {
+                        titleEl.textContent = 'Terminate Task';
+                        titleEl.className = 'modal-title font-montserrat fw-bold text-uppercase text-danger';
+                        msgEl.innerHTML = `WARNING: Are you sure you want to terminate the request for <strong>${vesselName}</strong>?`;
+                        confirmBtn.className = 'btn btn-danger font-montserrat fw-bold text-uppercase fs-7 text-white';
+                        confirmBtn.textContent = 'Terminate';
+                        modalContent.classList.remove('border-success');
+                        modalContent.classList.add('border-danger');
+                    } else {
+                        titleEl.textContent = 'Resolve Task';
+                        titleEl.className = 'modal-title font-montserrat fw-bold text-uppercase text-success';
+                        msgEl.innerHTML = `Confirm the dispatch for <strong>${vesselName}</strong> has been resolved out-of-band?`;
+                        confirmBtn.className = 'btn btn-success font-montserrat fw-bold text-uppercase fs-7 text-dark';
+                        confirmBtn.textContent = 'Resolve';
+                        modalContent.classList.remove('border-danger');
+                        modalContent.classList.add('border-success');
+                    }
+
+                    taskActionModalInstance.show();
+                });
+            });
+
+            if (document.getElementById('confirmTaskActionBtn')) {
+                document.getElementById('confirmTaskActionBtn').addEventListener('click', function() {
+                    if (pendingTaskForm) {
+                        pendingTaskForm.submit();
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

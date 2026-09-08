@@ -294,17 +294,17 @@ try {
                                                 Edit
                                             </button>
                                             
-                                            <!-- SUSPEND / RESTORE FORM -->
-                                            <form action="" method="POST" class="m-0" onsubmit="return confirm('<?= $client['is_active'] ? 'WARNING: Suspending this client revokes their login access immediately.' : 'Reactivate this client account?' ?>');">
+                                            <!-- SUSPEND / RESTORE FORM (Now intercepted by JS Modal) -->
+                                            <form action="" method="POST" class="m-0 toggle-status-form">
                                                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
                                                 <input type="hidden" name="action" value="toggle_status">
                                                 <input type="hidden" name="client_id" value="<?= $client['user_id']; ?>">
                                                 <input type="hidden" name="new_status" value="<?= $client['is_active'] ? '0' : '1'; ?>">
                                                 
                                                 <?php if ($client['is_active']): ?>
-                                                    <button type="submit" class="btn btn-sm btn-outline-warning font-montserrat fw-bold text-uppercase px-3">Suspend</button>
+                                                    <button type="button" class="btn btn-sm btn-outline-warning font-montserrat fw-bold text-uppercase px-3 toggle-btn" data-status="0" data-name="<?= htmlspecialchars($client['full_name'], ENT_QUOTES, 'UTF-8'); ?>">Suspend</button>
                                                 <?php else: ?>
-                                                    <button type="submit" class="btn btn-sm btn-success text-dark font-montserrat fw-bold text-uppercase px-3">Restore</button>
+                                                    <button type="button" class="btn btn-sm btn-success text-dark font-montserrat fw-bold text-uppercase px-3 toggle-btn" data-status="1" data-name="<?= htmlspecialchars($client['full_name'], ENT_QUOTES, 'UTF-8'); ?>">Restore</button>
                                                 <?php endif; ?>
                                             </form>
 
@@ -412,6 +412,25 @@ try {
             </div>
         </div>
     </div>
+    
+    <!-- 4. STATUS TOGGLE WARNING MODAL -->
+    <div class="modal fade" id="statusToggleModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card backdrop-blur-2xl border-warning border-opacity-50 shadow-lg text-white font-cascadia" id="statusToggleContent" style="background: rgba(13, 27, 42, 0.95);">
+                <div class="modal-header border-bottom border-secondary border-opacity-25">
+                    <h5 class="modal-title font-montserrat fw-bold text-uppercase" id="statusToggleTitle">Confirm Action</h5>
+                    <button type="button" class="btn-close btn-close-white opacity-50" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <p id="statusToggleMessage" class="mb-4">Are you sure?</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn btn-outline-secondary font-montserrat fw-bold text-uppercase fs-7" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning font-montserrat fw-bold text-uppercase fs-7 text-dark" id="confirmToggleBtn">Proceed</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="/apexx_marine/assets/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -436,6 +455,56 @@ try {
                     purgeModal.show();
                 });
             });
+
+            // Trigger Status Toggle Warning Modal Logic
+            let pendingToggleForm = null;
+            const toggleButtons = document.querySelectorAll('.toggle-btn');
+            let toggleModalInstance = null;
+            
+            if (document.getElementById('statusToggleModal')) {
+                toggleModalInstance = new bootstrap.Modal(document.getElementById('statusToggleModal'));
+            }
+
+            toggleButtons.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    pendingToggleForm = this.closest('form');
+                    const status = this.getAttribute('data-status');
+                    const clientName = this.getAttribute('data-name');
+                    
+                    const titleEl = document.getElementById('statusToggleTitle');
+                    const msgEl = document.getElementById('statusToggleMessage');
+                    const confirmBtn = document.getElementById('confirmToggleBtn');
+                    const modalContent = document.getElementById('statusToggleContent');
+
+                    if (status === '0') {
+                        titleEl.textContent = 'Suspend Account';
+                        titleEl.className = 'modal-title font-montserrat fw-bold text-uppercase text-warning';
+                        msgEl.innerHTML = `WARNING: Suspending <strong>${clientName}</strong> revokes their login access immediately. Proceed?`;
+                        confirmBtn.className = 'btn btn-warning font-montserrat fw-bold text-uppercase fs-7 text-dark';
+                        confirmBtn.textContent = 'Suspend';
+                        modalContent.classList.remove('border-success');
+                        modalContent.classList.add('border-warning');
+                    } else {
+                        titleEl.textContent = 'Restore Account';
+                        titleEl.className = 'modal-title font-montserrat fw-bold text-uppercase text-success';
+                        msgEl.innerHTML = `Reactivate the account for <strong>${clientName}</strong>? They will regain system access.`;
+                        confirmBtn.className = 'btn btn-success font-montserrat fw-bold text-uppercase fs-7 text-dark';
+                        confirmBtn.textContent = 'Restore';
+                        modalContent.classList.remove('border-warning');
+                        modalContent.classList.add('border-success');
+                    }
+
+                    toggleModalInstance.show();
+                });
+            });
+
+            if (document.getElementById('confirmToggleBtn')) {
+                document.getElementById('confirmToggleBtn').addEventListener('click', function() {
+                    if (pendingToggleForm) {
+                        pendingToggleForm.submit();
+                    }
+                });
+            }
         });
     </script>
 </body>

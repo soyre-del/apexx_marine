@@ -145,11 +145,10 @@ try {
                         <p class="text-info mb-3 small text-uppercase letter-spacing-wide">Assigned: <strong><?= htmlspecialchars($op['eng_name']); ?></strong></p>
                         
                         <!-- Unified Action Form -->
-                        <form action="" method="POST" class="mt-auto pt-3 border-top border-secondary border-opacity-25" onsubmit="return confirmStatusChange(this);">
+                        <form action="" method="POST" class="mt-auto pt-3 border-top border-secondary border-opacity-25" onsubmit="return confirmStatusChange(event, this);">
                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
                             <input type="hidden" name="action" value="add_update">
                             <input type="hidden" name="request_id" value="<?= $op['request_id']; ?>">
-                            <!-- We strictly need the engineer_id to free them up if resolved -->
                             <input type="hidden" name="engineer_id" value="<?= $op['engineer_id']; ?>">
                             
                             <input type="text" name="milestone" class="form-control bg-dark border-secondary text-white shadow-none mb-2" placeholder="Milestone (e.g., Arrived, Part Replaced, Fixed)" required>
@@ -159,7 +158,6 @@ try {
                                 <select name="new_status" class="form-select bg-dark border-secondary text-white shadow-none w-50 status-selector">
                                     <option value="deployed" <?= $op['status'] === 'deployed' ? 'selected' : '' ?>>Deployed (En Route)</option>
                                     <option value="in_progress" <?= $op['status'] === 'in_progress' ? 'selected' : '' ?>>In Progress (Working)</option>
-                                    <!-- NEW: Resolved Option directly inside the dropdown -->
                                     <option value="resolved" class="text-success fw-bold">Resolved (Finish Task)</option>
                                 </select>
                                 <button type="submit" class="btn btn-info font-montserrat fw-bold text-uppercase text-dark w-50 shadow-sm">Post Log</button>
@@ -171,13 +169,49 @@ try {
         <?php endif; ?>
     </div>
 
+    <!-- Bootstrap Warning Modal -->
+    <div class="modal fade" id="resolveWarningModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-white border-info border-opacity-50 glass-card">
+                <div class="modal-header border-secondary border-opacity-25">
+                    <h5 class="modal-title font-montserrat fw-bold text-uppercase text-info">Confirm Resolution</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body font-cascadia">
+                    <p class="mb-0 text-warning">WARNING: Marking this as 'Resolved' will finish the operation and immediately release the engineer back to the available roster.</p>
+                    <p class="mt-2 mb-0">Proceed with closing this request?</p>
+                </div>
+                <div class="modal-footer border-secondary border-opacity-25">
+                    <button type="button" class="btn btn-outline-secondary font-montserrat fw-bold text-uppercase" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-info font-montserrat fw-bold text-uppercase text-dark" id="confirmResolveBtn">Proceed</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/apexx_marine/assets/js/bootstrap.bundle.min.js"></script>
     <script>
-        // JS safeguard: If the admin selects "Resolved", warn them before submitting
-        function confirmStatusChange(formElement) {
+        let pendingForm = null;
+        let resolveModal = null;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            resolveModal = new bootstrap.Modal(document.getElementById('resolveWarningModal'));
+            
+            // Attach click event to the modal's proceed button
+            document.getElementById('confirmResolveBtn').addEventListener('click', function() {
+                if (pendingForm) {
+                    pendingForm.submit(); 
+                }
+            });
+        });
+
+        function confirmStatusChange(event, formElement) {
             var selectedStatus = formElement.querySelector('.status-selector').value;
             if (selectedStatus === 'resolved') {
-                return confirm("WARNING: Marking this as 'Resolved' will finish the operation and immediately release the engineer back to the available roster. Proceed?");
+                event.preventDefault(); // Stop immediate form submission
+                pendingForm = formElement; // Save the form that was triggered
+                resolveModal.show(); // Show the UI modal instead of the JS alert
+                return false;
             }
             return true;
         }
