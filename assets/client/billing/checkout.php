@@ -97,7 +97,7 @@ if (!$invoice) {
                 <button type="submit" class="btn btn-info w-100 fw-bold text-uppercase py-2">
                     Confirm & Submit Payment
                 </button>
-                <a href="payment_checkout.php" class="btn btn-outline-secondary w-100 fw-bold text-uppercase py-2 mt-2">
+                <a href="/apexx_marine/assets/client/status.php" class="btn btn-outline-secondary w-100 fw-bold text-uppercase py-2 mt-2">
                     Cancel
                 </a>
             </form>

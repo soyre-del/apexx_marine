@@ -53,14 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_logged_in) {
                     
                     unset($_SESSION['csrf_token']);
                     
-                    // 4. SMART REDIRECT LOGIC
-                    if ($_SESSION['role'] === 'admin') {
-                        header("Location: /apexx_marine/assets/admin/admin.php");
-                    } elseif ($_SESSION['role'] === 'client') {
-                        header("Location: /apexx_marine/assets/includes/login.php");
-                    } else {
-                        header("Location: /apexx_marine/index.php"); // Fallback for standard users/engineers
-                    }
+                    // 4. Redirect to self to display the Welcome UI
+                    header("Location: " . $_SERVER['PHP_SELF']);
                     exit();
                     
                 } else {
@@ -90,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_logged_in) {
     <link rel="stylesheet" href="/apexx_marine/assets/css/custom-bootstrap.css">
 
     <style>
-        /* Precision UI Resizing & Alignment (Matches Register UI) */
+        /* Precision UI Resizing & Alignment */
         .glass-card {
             background: rgba(13, 27, 42, 0.7);
             backdrop-filter: blur(20px);
@@ -148,7 +142,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_logged_in) {
 
     <div class="position-absolute top-50 start-50 translate-middle glow-blob glow-blob-ocean" style="width: 700px; height: 700px; z-index: 0; opacity: 0.6;"></div>
 
-    <!-- ADJUSTED: max-width increased to 480px, spacing tightened -->
     <div class="card glass-card backdrop-blur-2xl rounded-2rem shadow-lg position-relative z-1 w-100 border-0 text-white mt-3" style="max-width: 480px;">
         
         <div class="card-header bg-transparent border-bottom border-secondary border-opacity-25 text-center position-relative overflow-hidden pt-4 pb-3 px-4 px-sm-5">
@@ -175,7 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_logged_in) {
                 <div class="text-center">
                     
                     <?php if ($_SESSION['role'] === 'admin'): ?>
-                        <!-- ADMIN WELCOME UI -->
+                        <!-- 1. ADMIN WELCOME UI (Yellow) -->
                         <div class="alert-terminal-success font-cascadia p-4 mb-4 shadow-sm d-flex flex-column text-warning border border-warning border-opacity-25 rounded-3" style="background: rgba(245, 158, 11, 0.05);">
                             <svg width="48" height="48" class="mx-auto mb-3 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             <span class="fw-bold fs-5 mb-2 font-montserrat text-uppercase">Admin Override</span>
@@ -187,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_logged_in) {
                         </a>
                         
                     <?php elseif ($_SESSION['role'] === 'client'): ?>
-                        <!-- CLIENT WELCOME UI -->
+                        <!-- 2. CLIENT WELCOME UI (Blue) -->
                         <div class="alert-terminal-success font-cascadia p-4 mb-4 shadow-sm d-flex flex-column text-info border border-info border-opacity-25 rounded-3" style="background: rgba(14, 165, 233, 0.05);">
                             <svg width="48" height="48" class="mx-auto mb-3 text-info" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             <span class="fw-bold fs-5 mb-2 font-montserrat text-uppercase">Client Portal</span>
@@ -198,10 +191,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_logged_in) {
                             Access Operations Tracker
                         </a>
 
-                    <?php else: ?>
-                        <!-- STANDARD USER WELCOME UI -->
+                    <?php elseif ($_SESSION['role'] === 'engineer'): ?>
+                        <!-- 3. ENGINEER WELCOME UI (Green) -->
                         <div class="alert-terminal-success font-cascadia p-4 mb-4 shadow-sm d-flex flex-column text-success border border-success border-opacity-25 rounded-3" style="background: rgba(16, 185, 129, 0.05);">
-                            <svg width="48" height="48" class="mx-auto mb-3 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <svg width="48" height="48" class="mx-auto mb-3 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <span class="fw-bold fs-5 mb-2 font-montserrat text-uppercase">Field Operative</span>
+                            <span class="text-brand-steel fs-7">Welcome back, <?= htmlspecialchars($_SESSION['full_name']); ?>. <br>Clearance level: <strong>ENGINEER</strong></span>
+                        </div>
+
+                        <!-- Update this link if your Engineer dashboard is located elsewhere -->
+                        <a href="/apexx_marine/assets/engineer/eng.php" class="btn btn-success w-100 py-2 rounded-3 font-montserrat fw-bold text-uppercase fs-7 shadow-sm mb-3 text-dark">
+                            Access Field Terminal
+                        </a>
+
+                    <?php else: ?>
+                        <!-- 4. FALLBACK WELCOME UI -->
+                        <div class="alert-terminal-success font-cascadia p-4 mb-4 shadow-sm d-flex flex-column text-secondary border border-secondary border-opacity-25 rounded-3" style="background: rgba(255, 255, 255, 0.05);">
+                            <svg width="48" height="48" class="mx-auto mb-3 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             <span class="fw-bold fs-5 mb-2 font-montserrat text-uppercase">Connection Active</span>
                             <span class="text-brand-steel fs-7">Welcome back, <?= htmlspecialchars($_SESSION['full_name']); ?>. <br>Your clearance level: <strong><?= strtoupper(htmlspecialchars($_SESSION['role'])); ?></strong></span>
                         </div>

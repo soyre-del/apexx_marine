@@ -71,10 +71,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch Unbilled Requests - Highlighting "Completed" operations that need invoicing
+// Fetch Unbilled Requests - Accurately pulling from operation_updates
 try {
     $unbilledStmt = $pdo->query("
-        SELECT d.request_id, d.vessel_name, d.status, u.full_name AS client_name 
+        SELECT 
+            d.request_id, 
+            d.vessel_name, 
+            d.status, 
+            u.full_name AS client_name,
+            -- Subqueries perfectly mapped to your actual database columns
+            (SELECT status_milestone FROM operation_updates WHERE request_id = d.request_id ORDER BY logged_at DESC LIMIT 1) AS latest_milestone,
+            (SELECT detailed_message FROM operation_updates WHERE request_id = d.request_id ORDER BY logged_at DESC LIMIT 1) AS problem_description
         FROM dispatch_requests d
         JOIN users u ON d.client_id = u.user_id
         LEFT JOIN invoices i ON d.request_id = i.request_id
@@ -85,6 +92,7 @@ try {
     ");
     $unbilled_requests = $unbilledStmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
+    $error = "Query Failed: " . $e->getMessage();
     $unbilled_requests = [];
 }
 
@@ -154,7 +162,7 @@ try {
     <?php endif; ?>
 
     <!-- Summary Metrics -->
-    <div class="row g-4 mb-4">
+    <div class="row g-4 mb-5">
         <div class="col-md-4">
             <div class="card glass-card backdrop-blur-2xl border-success border-opacity-50 p-4">
                 <span class="text-success text-uppercase letter-spacing-wide small fw-bold">Collected Revenue</span>
@@ -181,7 +189,88 @@ try {
         </div>
     </div>
 
+    <!-- NEW: Unbilled Operations Ledger -->
+    <div class="d-flex align-items-center mb-3 gap-2">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" class="text-warning" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <h5 class="font-montserrat fw-bold text-white text-uppercase mb-0">Operations Awaiting Billing</h5>
+    </div>
+    
+    <div class="card glass-card backdrop-blur-2xl border-warning border-opacity-50 overflow-hidden mb-5">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0 font-cascadia align-middle">
+                <thead class="border-bottom border-warning border-opacity-50 text-uppercase letter-spacing-wide" style="font-size: 0.8rem;">
+                    <tr>
+                        <th class="py-3 px-4 text-warning">Request ID</th>
+                        <th class="py-3 px-4">Client Organization</th>
+                        <th class="py-3 px-4">Vessel & Issue</th>
+                        <th class="py-3 px-4 text-center">Resolve Status</th>
+                        <th class="py-3 px-4 text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($unbilled_requests)): ?>
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-secondary">All operations have been successfully billed.</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($unbilled_requests as $req): ?>
+                            <tr class="border-bottom border-secondary border-opacity-25 <?= $req['status'] === 'completed' ? 'bg-warning bg-opacity-10' : ''; ?>">
+                                <td class="px-4 text-white fw-bold">REQ-<?= str_pad($req['request_id'], 4, '0', STR_PAD_LEFT); ?></td>
+                                <td class="px-4 text-white"><?= htmlspecialchars($req['client_name']); ?></td>
+                                <td class="px-4">
+                                    <span class="text-info fw-bold"><?= htmlspecialchars($req['vessel_name']); ?></span>
+                                    
+                                    <?php if (!empty($req['latest_milestone'])): ?>
+                                        <div class="text-white small mt-1">
+                                            <strong>Status:</strong> <?= htmlspecialchars($req['latest_milestone']); ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($req['problem_description'])): ?>
+                                        <div class="text-secondary small text-truncate" style="max-width: 350px;" title="<?= htmlspecialchars($req['problem_description']); ?>">
+                                            <?= htmlspecialchars($req['problem_description']); ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="text-secondary small fst-italic">No operation logs submitted.</div>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-4 text-center">
+                                    <?php if ($req['status'] === 'completed'): ?>
+                                        <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-2 py-1 mb-1 d-inline-block text-uppercase">RESOLVED</span><br>
+                                        <span class="text-warning fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">NEEDS PAYMENT</span>
+                                    <?php elseif ($req['status'] === 'in_progress' || $req['status'] === 'deployed'): ?>
+                                        <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-50 px-2 py-1 mb-1 d-inline-block text-uppercase">IN PROGRESS</span><br>
+                                        <span class="text-secondary" style="font-size: 0.7rem; letter-spacing: 1px;">AWAITING RESOLUTION</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary bg-opacity-25 text-secondary border border-secondary border-opacity-50 px-2 py-1 mb-1 d-inline-block text-uppercase">PENDING</span><br>
+                                        <span class="text-secondary" style="font-size: 0.7rem; letter-spacing: 1px;">AWAITING RESOLUTION</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-4 text-end">
+                                    <?php if ($req['status'] === 'completed'): ?>
+                                        <button onclick="openInvoiceModal(<?= $req['request_id']; ?>)" class="btn btn-sm btn-warning font-montserrat fw-bold text-uppercase text-dark px-3 py-1 shadow-sm">
+                                            Bill Now
+                                        </button>
+                                    <?php else: ?>
+                                        <button disabled class="btn btn-sm btn-outline-secondary font-montserrat fw-bold text-uppercase px-3 py-1 border-opacity-25" style="opacity: 0.5;">
+                                            Hold Billing
+                                        </button>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Invoices Master Ledger -->
+    <div class="d-flex align-items-center mb-3 gap-2">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" class="text-info" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        <h5 class="font-montserrat fw-bold text-white text-uppercase mb-0">Invoices Master Ledger</h5>
+    </div>
+
     <div class="card glass-card backdrop-blur-2xl border-secondary border-opacity-25 overflow-hidden">
         <div class="table-responsive">
             <table class="table table-dark table-hover mb-0 font-cascadia align-middle">
@@ -200,7 +289,7 @@ try {
                 <tbody>
                     <?php if (empty($invoices)): ?>
                         <tr>
-                            <td colspan="8" class="text-center py-5 text-secondary">No invoices issued yet. Click "+ Generate Invoice" to bill a request.</td>
+                            <td colspan="8" class="text-center py-5 text-secondary">No invoices issued yet. Click "Bill Now" on a completed operation above.</td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($invoices as $inv): ?>
@@ -275,22 +364,19 @@ try {
                         
                         <div class="mb-3">
                             <label class="form-label text-secondary small text-uppercase fw-bold">Select Unbilled Request</label>
-                            <select name="request_id" class="form-select bg-black text-white border-secondary" required>
+                            <select id="request_dropdown" name="request_id" class="form-select bg-black text-white border-secondary" required>
                                 <?php if (empty($unbilled_requests)): ?>
                                     <option value="" disabled selected>No unbilled requests found</option>
                                 <?php else: ?>
                                     <option value="" disabled selected>Choose a request...</option>
                                     <?php foreach ($unbilled_requests as $unb): ?>
                                         <option value="<?= $unb['request_id']; ?>" <?= $unb['status'] === 'completed' ? 'class="text-warning fw-bold bg-dark"' : ''; ?>>
-                                            <?= $unb['status'] === 'completed' ? '🚨 [COMPLETED - NEEDS BILLING] ' : ''; ?>
-                                            REQ-<?= str_pad($unb['request_id'], 4, '0', STR_PAD_LEFT); ?> | <?= htmlspecialchars($unb['vessel_name']); ?> (<?= htmlspecialchars($unb['client_name']); ?>)
+                                            <?= $unb['status'] === 'completed' ? '🚨 [NEEDS PAYMENT] ' : ''; ?>
+                                            REQ-<?= str_pad($unb['request_id'], 4, '0', STR_PAD_LEFT); ?> | <?= htmlspecialchars($unb['vessel_name']); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
                             </select>
-                            <div class="form-text text-secondary mt-2" style="font-size: 11px;">
-                                * Completed operations jump to the top of the list for immediate invoicing.
-                            </div>
                         </div>
 
                         <div class="row g-2">
@@ -319,5 +405,14 @@ try {
     </div>
 
     <script src="/apexx_marine/assets/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Script to link 'Bill Now' button directly to the invoice generator -->
+    <script>
+        function openInvoiceModal(requestId) {
+            document.getElementById('request_dropdown').value = requestId;
+            var modal = new bootstrap.Modal(document.getElementById('createInvoiceModal'));
+            modal.show();
+        }
+    </script>
 </body>
 </html>
