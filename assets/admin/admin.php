@@ -320,7 +320,7 @@ try {
 <body class="bg-brand-dark text-brand-steel min-vh-100 position-relative bg-grid-pattern font-cascadia">
 
     <!-- Top Navigation Command Bar -->
-    <nav class="navbar shadow-lg px-4 py-3" style="background-color: rgba(13, 42, 74, 0.95); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(245, 158, 11, 0.2);">
+<nav class="navbar shadow-lg px-4 py-3" style="background-color: rgba(13, 42, 74, 0.95); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(245, 158, 11, 0.2);">
         <div class="container-fluid">
             <!-- Left: System Identity -->
             <div class="d-flex align-items-center gap-3">
@@ -334,16 +334,25 @@ try {
             <!-- Right: Minimalist Controls -->
             <div class="d-flex gap-4 align-items-center">
                 <div class="d-flex gap-2">
+                    <!-- Billing & Revenue Added Here -->
+                    <a href="/apexx_marine/assets/admin/billing.php" class="btn btn-sm btn-outline-warning font-montserrat fw-bold text-uppercase d-flex align-items-center gap-2 rounded-3 px-3 py-2 border-opacity-50">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Billing
+                    </a>
+                    
                     <a href="active_ops.php" class="btn btn-sm btn-outline-success font-montserrat fw-bold text-uppercase d-flex align-items-center gap-2 rounded-3 px-3 py-2 border-opacity-50">
                         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                         Active Ops
                     </a>
+                    
                     <a href="/apexx_marine/index.php" class="btn btn-sm btn-outline-info font-montserrat fw-bold text-uppercase d-flex align-items-center gap-2 rounded-3 px-3 py-2 border-opacity-50">
                         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                         Public
                     </a>
                 </div>
+                
                 <div class="vr bg-secondary opacity-25" style="width: 1px; height: 24px;"></div>
+                
                 <div class="d-flex align-items-center gap-3">
                     <span class="text-secondary small font-cascadia">
                         ID: <strong class="text-white"><?= htmlspecialchars((string)($_SESSION['full_name'] ?? 'Admin')); ?></strong>

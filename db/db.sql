@@ -86,6 +86,18 @@ CREATE TABLE operation_updates (
 );
 
 
+CREATE TABLE invoices (
+    invoice_id INT AUTO_INCREMENT PRIMARY KEY,
+    request_id INT NOT NULL,
+    client_id INT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    payment_method VARCHAR(50) NULL,
+    reference_number VARCHAR(100) NULL,
+    payment_status ENUM('unpaid', 'paid', 'failed') DEFAULT 'unpaid',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (request_id) REFERENCES dispatch_requests(request_id)
+);
 
 INSERT INTO operational_hubs (hub_id, hub_name, hub_type) VALUES 
 (1, 'APAC Hub', 'Rapid Deployment'),

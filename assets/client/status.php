@@ -10,8 +10,16 @@ require __DIR__ . '/../../db/db.php';
 $client_id = $_SESSION['user_id'];
 
 try {
-    // 1. Fetch Client's Requests
-    $stmt = $pdo->prepare("SELECT request_id, vessel_name, status, requested_at FROM dispatch_requests WHERE client_id = ? ORDER BY requested_at DESC");
+    // 1. Fetch Client's Requests WITH Invoice data using LEFT JOIN
+    $stmt = $pdo->prepare("
+        SELECT 
+            d.request_id, d.vessel_name, d.status, d.requested_at,
+            i.invoice_id, i.payment_status, i.amount, i.currency
+        FROM dispatch_requests d
+        LEFT JOIN invoices i ON d.request_id = i.request_id
+        WHERE d.client_id = ? 
+        ORDER BY d.requested_at DESC
+    ");
     $stmt->execute([$client_id]);
     $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -115,23 +123,45 @@ try {
                     <div class="col-12">
                         <div class="card glass-card backdrop-blur-2xl border-0 shadow-lg p-4">
                             <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary border-opacity-25 pb-3">
+                                
                                 <h4 class="text-white font-montserrat fw-bold text-uppercase m-0 d-flex align-items-center gap-2">
                                     <svg width="24" height="24" class="text-info" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                                     <?= htmlspecialchars($req['vessel_name']); ?> 
                                     <span class="fs-6 text-secondary font-cascadia">REQ-<?= str_pad($req['request_id'], 4, '0', STR_PAD_LEFT); ?></span>
                                 </h4>
                                 
-                                <?php 
-                                    $badgeClass = 'bg-secondary';
-                                    if ($req['status'] === 'pending') $badgeClass = 'bg-warning text-dark';
-                                    if ($req['status'] === 'deployed') $badgeClass = 'bg-info text-dark';
-                                    if ($req['status'] === 'in_progress') $badgeClass = 'bg-primary';
-                                    if ($req['status'] === 'resolved') $badgeClass = 'bg-success';
-                                    if ($req['status'] === 'cancelled') $badgeClass = 'bg-danger';
-                                ?>
-                                <span class="badge <?= $badgeClass; ?> text-uppercase px-3 py-2 font-montserrat letter-spacing-wide shadow-sm" style="font-size: 0.75rem;">
-                                    Status: <?= htmlspecialchars($req['status']); ?>
-                                </span>
+                                <div class="d-flex align-items-center gap-3">
+                                    <?php 
+                                        $badgeClass = 'bg-secondary';
+                                        if ($req['status'] === 'pending') $badgeClass = 'bg-warning text-dark';
+                                        if ($req['status'] === 'deployed') $badgeClass = 'bg-info text-dark';
+                                        if ($req['status'] === 'in_progress') $badgeClass = 'bg-primary';
+                                        if ($req['status'] === 'resolved') $badgeClass = 'bg-success';
+                                        if ($req['status'] === 'cancelled') $badgeClass = 'bg-danger';
+                                    ?>
+                                    <span class="badge <?= $badgeClass; ?> text-uppercase px-3 py-2 font-montserrat letter-spacing-wide shadow-sm" style="font-size: 0.75rem;">
+                                        Status: <?= htmlspecialchars($req['status']); ?>
+                                    </span>
+
+                                    <!-- PAYMENT BUTTON / STATUS BADGE -->
+                                    <?php if (!empty($req['invoice_id'])): ?>
+                                        <?php if ($req['payment_status'] === 'unpaid'): ?>
+                                            <!-- The Pay Button -->
+                                            <a href="/apexx_marine/assets/client/billing/checkout.php?invoice_id=<?= $req['invoice_id']; ?>" 
+                                               class="btn btn-warning btn-sm font-montserrat fw-bold text-uppercase rounded-3 px-3 shadow-sm d-flex align-items-center gap-2">
+                                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                Pay <?= htmlspecialchars($req['currency']) . ' ' . number_format($req['amount'], 2); ?>
+                                            </a>
+                                        <?php elseif ($req['payment_status'] === 'paid'): ?>
+                                            <!-- The Paid Badge -->
+                                            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 text-uppercase px-3 py-2 font-montserrat letter-spacing-wide shadow-sm" style="font-size: 0.75rem;">
+                                                <svg width="14" height="14" class="me-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                                                Paid
+                                            </span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </div>
+
                             </div>
                             
                             <h6 class="text-brand-steel font-montserrat fw-bold text-uppercase mt-2">Live Timeline Log</h6>

@@ -282,11 +282,10 @@ include '../assets/includes/header.php';
     </div>
 </section>
 
-<!-- Official Google Maps JavaScript API Integration -->
-<script src="/apexx_marine/assets/js/aboutUs.js"></script>
 
-<!-- Load Official Google Maps API with your Key -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="/apexx_marine/assets/leaflet/leaflet.css" />
+<script src="/apexx_marine/assets/leaflet/leaflet.js"></script>
+
+<script src="/apexx_marine/assets/js/aboutUs.js"></script>
 
 <?php include '../assets/includes/footer.php'; ?>
