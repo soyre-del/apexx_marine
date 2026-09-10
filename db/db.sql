@@ -1,43 +1,76 @@
--- 1. Identity & Profiles
+CREATE DATABASE IF NOT EXISTS apex_marine;
+
+USE apex_marine;
+
+-- =========================================================
+-- 1. INDEPENDENT / PARENT TABLES
+-- =========================================================
+
 CREATE TABLE users (
-    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     full_name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('client', 'engineer', 'admin') DEFAULT 'client',
     is_active TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB;
+
+
+CREATE TABLE operational_hubs (
+    hub_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    hub_name VARCHAR(100) NOT NULL,
+    hub_type VARCHAR(50) DEFAULT 'Standard'
+) ENGINE=InnoDB;
+
+
+-- =========================================================
+-- 2. PROFILE TABLES
+-- =========================================================
+
+CREATE TABLE client_profiles (
+    client_id INT NOT NULL PRIMARY KEY,
+    company_name VARCHAR(150) DEFAULT NULL,
+    contact_number VARCHAR(50) DEFAULT NULL
+) ENGINE=InnoDB;
+
 
 CREATE TABLE engineer_profiles (
-    engineer_id INT PRIMARY KEY,
+    engineer_id INT NOT NULL PRIMARY KEY,
     specialty VARCHAR(100) NOT NULL,
-    current_status ENUM('available', 'deployed', 'on_leave') DEFAULT 'available',
-    FOREIGN KEY (engineer_id) REFERENCES users(user_id) ON DELETE CASCADE
-);
+    current_status ENUM('available', 'deployed', 'on_leave')
+        DEFAULT 'available'
+) ENGINE=InnoDB;
 
--- 2. Infrastructure & Locations
-CREATE TABLE operational_hubs (
-    hub_id INT AUTO_INCREMENT PRIMARY KEY,
-    hub_name VARCHAR(100) NOT NULL,
-    hub_type VARCHAR(50) DEFAULT 'Standard' -- e.g., 'Rapid Deployment' for APAC
-);
+
+-- =========================================================
+-- 3. SERVICE LOCATIONS
+-- =========================================================
 
 CREATE TABLE service_locations (
-    location_id INT AUTO_INCREMENT PRIMARY KEY,
+    location_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     hub_id INT NOT NULL,
-    port_name VARCHAR(100) NOT NULL, -- e.g., 'Singapore', 'Rotterdam'
-    FOREIGN KEY (hub_id) REFERENCES operational_hubs(hub_id) ON DELETE RESTRICT
-);
+    port_name VARCHAR(100) NOT NULL,
 
--- 3. Core Transactions (UPDATED)
+    CONSTRAINT fk_service_location_hub
+        FOREIGN KEY (hub_id)
+        REFERENCES operational_hubs(hub_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+
+-- =========================================================
+-- 4. DISPATCH REQUESTS
+-- =========================================================
+
 CREATE TABLE dispatch_requests (
-    request_id INT AUTO_INCREMENT PRIMARY KEY,
+    request_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     client_id INT NOT NULL,
     vessel_name VARCHAR(100) NOT NULL,
     imo_number VARCHAR(50) NOT NULL,
     vessel_type VARCHAR(100) NOT NULL,
-    company VARCHAR(100) NULL,
+    company VARCHAR(100) DEFAULT NULL,
     contact_person VARCHAR(100) NOT NULL,
     contact_phone VARCHAR(50) NOT NULL,
     eta_date DATE NOT NULL,
@@ -45,70 +78,123 @@ CREATE TABLE dispatch_requests (
     is_urgent TINYINT(1) DEFAULT 0,
     location_id INT NOT NULL,
     description TEXT NOT NULL,
-    attachment_path VARCHAR(255) NULL,
-    status ENUM('pending', 'acknowledged', 'deployed', 'in_progress', 'resolved', 'cancelled') DEFAULT 'pending',
-    is_active TINYINT(1) DEFAULT 1, -- NEW: Soft delete for historical records
+    attachment_path VARCHAR(255) DEFAULT NULL,
+    status ENUM(
+        'pending',
+        'acknowledged',
+        'deployed',
+        'in_progress',
+        'resolved',
+        'cancelled'
+    ) DEFAULT 'pending',
+    is_active TINYINT(1) DEFAULT 1,
     requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (client_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (location_id) REFERENCES service_locations(location_id) ON DELETE RESTRICT
-);
 
--- NEW: Indexes for high-speed Admin Dashboard filtering
-CREATE INDEX idx_dispatch_status ON dispatch_requests(status);
-CREATE INDEX idx_dispatch_urgency ON dispatch_requests(is_urgent);
+    CONSTRAINT fk_dispatch_client
+        FOREIGN KEY (client_id)
+        REFERENCES client_profiles(client_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
 
--- 4. Operations & Deployments
+    CONSTRAINT fk_dispatch_location
+        FOREIGN KEY (location_id)
+        REFERENCES service_locations(location_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+
+-- =========================================================
+-- 5. DEPLOYMENTS
+-- =========================================================
+
 CREATE TABLE deployments (
-    deployment_id INT AUTO_INCREMENT PRIMARY KEY,
-    request_id INT NOT NULL,
-    admin_id INT NOT NULL, 
+    deployment_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    request_id INT NOT NULL UNIQUE,
+    admin_id INT NOT NULL,
     engineer_id INT NOT NULL,
-    deployment_status ENUM('en_route', 'on_site', 'completed') DEFAULT 'en_route',
+    deployment_status ENUM(
+        'en_route',
+        'on_site',
+        'completed'
+    ) DEFAULT 'en_route',
     deployed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (request_id) REFERENCES dispatch_requests(request_id) ON DELETE CASCADE,
-    FOREIGN KEY (admin_id) REFERENCES users(user_id) ON DELETE RESTRICT,
-    FOREIGN KEY (engineer_id) REFERENCES engineer_profiles(engineer_id) ON DELETE RESTRICT
-);
 
-CREATE TABLE operation_updates (
-    update_id INT AUTO_INCREMENT PRIMARY KEY,
-    request_id INT NOT NULL,
-    updater_id INT NOT NULL, 
-    status_milestone VARCHAR(100) NOT NULL,
-    detailed_message TEXT NOT NULL,
-    attachment_path VARCHAR(255) NULL, -- NEW: Engineer proof of completion
-    logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (request_id) REFERENCES dispatch_requests(request_id) ON DELETE CASCADE,
-    FOREIGN KEY (updater_id) REFERENCES users(user_id) ON DELETE RESTRICT
-);
+    CONSTRAINT fk_deployment_request
+        FOREIGN KEY (request_id)
+        REFERENCES dispatch_requests(request_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
 
+    CONSTRAINT fk_deployment_admin
+        FOREIGN KEY (admin_id)
+        REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_deployment_engineer
+        FOREIGN KEY (engineer_id)
+        REFERENCES engineer_profiles(engineer_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+
+-- =========================================================
+-- 6. INVOICES
+-- =========================================================
 
 CREATE TABLE invoices (
-    invoice_id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     request_id INT NOT NULL,
     client_id INT NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
     currency VARCHAR(3) DEFAULT 'USD',
-    payment_method VARCHAR(50) NULL,
-    reference_number VARCHAR(100) NULL,
-    payment_status ENUM('unpaid', 'paid', 'failed') DEFAULT 'unpaid',
+    payment_method VARCHAR(50) DEFAULT NULL,
+    reference_number VARCHAR(100) DEFAULT NULL,
+    payment_status ENUM(
+        'unpaid',
+        'paid',
+        'failed'
+    ) DEFAULT 'unpaid',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (request_id) REFERENCES dispatch_requests(request_id)
-);
 
-INSERT INTO operational_hubs (hub_id, hub_name, hub_type) VALUES 
-(1, 'APAC Hub', 'Rapid Deployment'),
-(2, 'EMEA Hub', 'Standard'),
-(3, 'Americas Hub', 'Standard');
+    CONSTRAINT fk_invoice_request
+        FOREIGN KEY (request_id)
+        REFERENCES dispatch_requests(request_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
 
-INSERT INTO service_locations (location_id, hub_id, port_name) VALUES 
-(1, 1, 'Singapore'),
-(2, 1, 'Shanghai, China'),
-(3, 2, 'Rotterdam, Netherlands'),
-(4, 2, 'Dubai, UAE'),
-(5, 2, 'Cape Town, South Africa'),
-(6, 3, 'Houston, USA'),
-(7, 3, 'Panama City, Panama');
+    CONSTRAINT fk_invoice_client
+        FOREIGN KEY (client_id)
+        REFERENCES client_profiles(client_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+
+-- =========================================================
+-- 7. OPERATION UPDATES
+-- =========================================================
+
+CREATE TABLE operation_updates (
+    update_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    request_id INT NOT NULL,
+    updater_id INT NOT NULL,
+    status_milestone VARCHAR(100) NOT NULL,
+    detailed_message TEXT NOT NULL,
+    attachment_path VARCHAR(255) DEFAULT NULL,
+    logged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_update_request
+        FOREIGN KEY (request_id)
+        REFERENCES dispatch_requests(request_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_update_user
+        FOREIGN KEY (updater_id)
+        REFERENCES users(user_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+) ENGINE=InnoDB;

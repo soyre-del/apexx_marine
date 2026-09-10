@@ -295,9 +295,9 @@ unset($_SESSION['sys_msg'], $_SESSION['sys_msg_type']);
                         <div class="mb-4">
                             <label class="form-label text-brand-steel fw-bold text-uppercase letter-spacing-widest mb-2" style="font-size: 0.65rem;">New Operational Status</label>
                             <select name="new_status" id="modal_status" required class="form-select custom-input rounded-3 shadow-none">
-                                <option value="pending" style="background-color: var(--brand-navy);">Pending (Awaiting Action)</option>
-                                <option value="acknowledged" style="background-color: var(--brand-navy);">Acknowledged (Reviewed)</option>
                                 <option value="deployed" style="background-color: var(--brand-navy);">Deployed (En Route)</option>
+                                <option value="acknowledged" style="background-color: var(--brand-navy);">Acknowledged (Reviewed)</option>
+                                <option value="pending" style="background-color: var(--brand-navy);">Pending (Awaiting Action)</option>
                                 <option value="in_progress" style="background-color: var(--brand-navy);">In Progress (On Site)</option>
                                 <option value="resolved" style="background-color: var(--brand-navy);">Resolved / Completed</option>
                                 <option value="cancelled" style="background-color: var(--brand-navy);">Cancelled</option>
