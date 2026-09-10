@@ -3,6 +3,131 @@ session_start();
 include '../assets/includes/header.php';
 ?>
 
+<style>
+/* Core Map Container */
+.map-operations-center {
+    box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.8);
+}
+
+/* Holographic Grid Overlay */
+.map-grid {
+    background-image: linear-gradient(rgba(46, 107, 156, 0.1) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(46, 107, 156, 0.1) 1px, transparent 1px);
+    background-size: 30px 30px;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Vertical Scanner Animation */
+.map-scanner {
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--bs-brand-ocean, #2E6B9C), transparent);
+    box-shadow: 0 0 15px var(--bs-brand-ocean, #2E6B9C);
+    z-index: 2;
+    opacity: 0.5;
+    animation: scan 6s linear infinite;
+}
+
+@keyframes scan {
+    0% { top: -10px; opacity: 0; }
+    10% { opacity: 0.5; }
+    90% { opacity: 0.5; }
+    100% { top: 100%; opacity: 0; }
+}
+
+/* Hub Marker Elements */
+.hub-marker {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    pointer-events: auto;
+    cursor: crosshair;
+}
+
+.hub-dot {
+    width: 14px;
+    height: 14px;
+    background: var(--bs-brand-caution, #F59E0B);
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.8);
+    position: relative;
+    z-index: 2;
+    transition: transform 0.3s ease;
+}
+
+.hub-marker:hover .hub-dot {
+    transform: scale(1.3);
+    background: #fff;
+    border-color: var(--bs-brand-caution, #F59E0B);
+}
+
+/* Radar Ping Animation */
+.hub-ping {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(245, 158, 11, 0.4);
+    border-radius: 50%;
+    z-index: 1;
+    animation: radarPing 2.5s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+@keyframes radarPing {
+    0% { width: 14px; height: 14px; opacity: 1; }
+    100% { width: 60px; height: 60px; opacity: 0; border: 1px solid rgba(245, 158, 11, 0.5); }
+}
+
+/* Glassmorphism Tooltip */
+.hub-tooltip {
+    position: absolute;
+    bottom: 150%;
+    left: 50%;
+    transform: translate(-50%, 10px);
+    width: 220px;
+    background: rgba(13, 27, 42, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(46, 107, 156, 0.4);
+    border-radius: 8px;
+    padding: 12px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    z-index: 20;
+    pointer-events: none;
+}
+
+.hub-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: rgba(46, 107, 156, 0.4) transparent transparent transparent;
+}
+
+.hub-marker:hover .hub-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -5px);
+}
+
+.map-pulse-indicator {
+    animation: indicatorPulse 2s infinite;
+}
+@keyframes indicatorPulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+</style>
+
 <!-- ABOUT US PAGE CONTENT -->
 
 <!-- 1. Page Header -->
@@ -112,31 +237,170 @@ include '../assets/includes/header.php';
     <div class="container">
         <div class="row align-items-center g-5 flex-lg-row-reverse">
             <div class="col-lg-6">
-                <h2 class="font-montserrat fw-bold text-white text-uppercase mb-4">Strategic Global <span class="text-brand-ocean">Infrastructure</span></h2>
+                <h2 class="font-montserrat fw-bold text-white text-uppercase mb-4">Strategic Global<br><span class="text-brand-ocean">Infrastructure</span></h2>
                 <p class="text-brand-steel fw-light lh-lg mb-4">
                     Vessels don't break down on a convenient schedule. That's why our infrastructure is designed for maximum agility. With strategic hubs located near the world's busiest shipping lanes, our riding squads are pre-staged with specialized tooling and ready to fly at a moment's notice to uphold our objective of immediate reliability.
                 </p>
                 <ul class="list-unstyled text-brand-steel fw-light lh-lg">
                     <li class="mb-3 d-flex align-items-center">
-                        <svg class="text-brand-ocean me-3" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        <strong>APAC Hub:</strong> Singapore & Shanghai (Rapid Deployment Zone)
+                        <svg class="text-brand-ocean me-3" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        <strong>APAC Hub:</strong>Singapore & Shanghai (Rapid Deployment Zone)
                     </li>
                     <li class="mb-3 d-flex align-items-center">
-                        <svg class="text-brand-ocean me-3" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        <strong>EMEA Hub:</strong> Rotterdam, Dubai & Cape Town
+                        <svg class="text-brand-ocean me-3" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        <strong>EMEA Hub:</strong>Rotterdam, Dubai & Cape Town
                     </li>
                     <li class="mb-3 d-flex align-items-center">
-                        <svg class="text-brand-ocean me-3" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                        <strong>Americas Hub:</strong> Houston & Panama City
+                        <svg class="text-brand-ocean me-3" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        <strong>Americas Hub:</strong>Houston & Panama City
                     </li>
                 </ul>
             </div>
             
             <div class="col-lg-6">
                 <div class="glass-card p-4 rounded-4 text-center">
-                    <!-- Google Maps Official Container -->
-                    <div id="global-map" style="height: 400px; width: 100%; border-radius: inherit; z-index: 1;" class="border border-secondary border-opacity-25 overflow-hidden">
+                    
+                    <!-- PURE HTML/CSS Radar Map (Zero JS Dependencies) -->
+                    <div class="map-operations-center position-relative w-100 rounded-4 overflow-hidden border border-secondary border-opacity-25" style="height: 400px; background-color: #05101c; z-index: 1;">
+                        
+                        <!-- CSS Tech Grid Background -->
+                        <div class="map-grid position-absolute top-0 start-0 w-100 h-100"></div>
+                        
+                        <!-- Scanning Radar Overlay -->
+                        <div class="map-scanner position-absolute top-0 start-0 w-100"></div>
+                    
+                        <!-- Hardcoded HTML Markers -->
+                        <div class="position-absolute top-0 start-0 w-100 h-100" style="z-index: 5;">
+                            
+                            <!-- Singapore -->
+                            <div class="hub-marker" style="top: 55%; left: 79%;">
+                                <div class="hub-ping" style="animation-delay: 0s;"></div>
+                                <div class="hub-dot"></div>
+                                <div class="hub-tooltip">
+                                    <div class="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-50 pb-2 mb-2">
+                                        <span class="font-montserrat fw-bold text-uppercase" style="font-size: 0.75rem; color: #f59e0b;">APAC Hub</span>
+                                        <div class="d-flex align-items-center">
+                                            <span class="bg-success rounded-circle me-1" style="width:6px; height:6px; box-shadow: 0 0 5px #198754;"></span>
+                                            <span class="text-white font-montserrat" style="font-size: 0.65rem;">ONLINE</span>
+                                        </div>
+                                    </div>
+                                    <h5 class="text-white fw-bold mb-1" style="font-size: 1.1rem;">Singapore</h5>
+                                    <p class="mb-0" style="font-size: 0.8rem; color: #8a9bb0;">Rapid Deployment Zone</p>
+                                </div>
+                            </div>
+
+                            <!-- Shanghai -->
+                            <div class="hub-marker" style="top: 35%; left: 83%;">
+                                <div class="hub-ping" style="animation-delay: 0.3s;"></div>
+                                <div class="hub-dot"></div>
+                                <div class="hub-tooltip">
+                                    <div class="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-50 pb-2 mb-2">
+                                        <span class="font-montserrat fw-bold text-uppercase" style="font-size: 0.75rem; color: #f59e0b;">APAC Hub</span>
+                                        <div class="d-flex align-items-center">
+                                            <span class="bg-success rounded-circle me-1" style="width:6px; height:6px; box-shadow: 0 0 5px #198754;"></span>
+                                            <span class="text-white font-montserrat" style="font-size: 0.65rem;">ONLINE</span>
+                                        </div>
+                                    </div>
+                                    <h5 class="text-white fw-bold mb-1" style="font-size: 1.1rem;">Shanghai</h5>
+                                    <p class="mb-0" style="font-size: 0.8rem; color: #8a9bb0;">Dry-Dock Facility</p>
+                                </div>
+                            </div>
+
+                            <!-- Rotterdam -->
+                            <div class="hub-marker" style="top: 25%; left: 51%;">
+                                <div class="hub-ping" style="animation-delay: 0.6s;"></div>
+                                <div class="hub-dot"></div>
+                                <div class="hub-tooltip">
+                                    <div class="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-50 pb-2 mb-2">
+                                        <span class="font-montserrat fw-bold text-uppercase" style="font-size: 0.75rem; color: #f59e0b;">EMEA Hub</span>
+                                        <div class="d-flex align-items-center">
+                                            <span class="bg-success rounded-circle me-1" style="width:6px; height:6px; box-shadow: 0 0 5px #198754;"></span>
+                                            <span class="text-white font-montserrat" style="font-size: 0.65rem;">ONLINE</span>
+                                        </div>
+                                    </div>
+                                    <h5 class="text-white fw-bold mb-1" style="font-size: 1.1rem;">Rotterdam</h5>
+                                    <p class="mb-0" style="font-size: 0.8rem; color: #8a9bb0;">Command Center</p>
+                                </div>
+                            </div>
+
+                            <!-- Dubai -->
+                            <div class="hub-marker" style="top: 42%; left: 65%;">
+                                <div class="hub-ping" style="animation-delay: 0.9s;"></div>
+                                <div class="hub-dot"></div>
+                                <div class="hub-tooltip">
+                                    <div class="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-50 pb-2 mb-2">
+                                        <span class="font-montserrat fw-bold text-uppercase" style="font-size: 0.75rem; color: #f59e0b;">EMEA Hub</span>
+                                        <div class="d-flex align-items-center">
+                                            <span class="bg-success rounded-circle me-1" style="width:6px; height:6px; box-shadow: 0 0 5px #198754;"></span>
+                                            <span class="text-white font-montserrat" style="font-size: 0.65rem;">ONLINE</span>
+                                        </div>
+                                    </div>
+                                    <h5 class="text-white fw-bold mb-1" style="font-size: 1.1rem;">Dubai</h5>
+                                    <p class="mb-0" style="font-size: 0.8rem; color: #8a9bb0;">Mechanical Overhaul</p>
+                                </div>
+                            </div>
+
+                            <!-- Cape Town -->
+                            <div class="hub-marker" style="top: 75%; left: 55%;">
+                                <div class="hub-ping" style="animation-delay: 1.2s;"></div>
+                                <div class="hub-dot"></div>
+                                <div class="hub-tooltip">
+                                    <div class="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-50 pb-2 mb-2">
+                                        <span class="font-montserrat fw-bold text-uppercase" style="font-size: 0.75rem; color: #f59e0b;">EMEA Hub</span>
+                                        <div class="d-flex align-items-center">
+                                            <span class="bg-success rounded-circle me-1" style="width:6px; height:6px; box-shadow: 0 0 5px #198754;"></span>
+                                            <span class="text-white font-montserrat" style="font-size: 0.65rem;">ONLINE</span>
+                                        </div>
+                                    </div>
+                                    <h5 class="text-white fw-bold mb-1" style="font-size: 1.1rem;">Cape Town</h5>
+                                    <p class="mb-0" style="font-size: 0.8rem; color: #8a9bb0;">Emergency Dispatch</p>
+                                </div>
+                            </div>
+
+                            <!-- Houston -->
+                            <div class="hub-marker" style="top: 40%; left: 23%;">
+                                <div class="hub-ping" style="animation-delay: 1.5s;"></div>
+                                <div class="hub-dot"></div>
+                                <div class="hub-tooltip">
+                                    <div class="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-50 pb-2 mb-2">
+                                        <span class="font-montserrat fw-bold text-uppercase" style="font-size: 0.75rem; color: #f59e0b;">Americas Hub</span>
+                                        <div class="d-flex align-items-center">
+                                            <span class="bg-success rounded-circle me-1" style="width:6px; height:6px; box-shadow: 0 0 5px #198754;"></span>
+                                            <span class="text-white font-montserrat" style="font-size: 0.65rem;">ONLINE</span>
+                                        </div>
+                                    </div>
+                                    <h5 class="text-white fw-bold mb-1" style="font-size: 1.1rem;">Houston</h5>
+                                    <p class="mb-0" style="font-size: 0.8rem; color: #8a9bb0;">Structural Repair</p>
+                                </div>
+                            </div>
+
+                            <!-- Panama City -->
+                            <div class="hub-marker" style="top: 52%; left: 28%;">
+                                <div class="hub-ping" style="animation-delay: 1.8s;"></div>
+                                <div class="hub-dot"></div>
+                                <div class="hub-tooltip">
+                                    <div class="d-flex justify-content-between align-items-center border-bottom border-secondary border-opacity-50 pb-2 mb-2">
+                                        <span class="font-montserrat fw-bold text-uppercase" style="font-size: 0.75rem; color: #f59e0b;">Americas Hub</span>
+                                        <div class="d-flex align-items-center">
+                                            <span class="bg-success rounded-circle me-1" style="width:6px; height:6px; box-shadow: 0 0 5px #198754;"></span>
+                                            <span class="text-white font-montserrat" style="font-size: 0.65rem;">ONLINE</span>
+                                        </div>
+                                    </div>
+                                    <h5 class="text-white fw-bold mb-1" style="font-size: 1.1rem;">Panama City</h5>
+                                    <p class="mb-0" style="font-size: 0.8rem; color: #8a9bb0;">Mid-Voyage Interventions</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Map Legend/Overlay -->
+                        <div class="position-absolute bottom-0 start-0 p-3 z-3" style="pointer-events: none;">
+                            <div class="glass-card px-3 py-2 rounded-3 d-inline-flex align-items-center" style="background: rgba(13, 27, 42, 0.7); backdrop-filter: blur(8px); border: 1px solid rgba(46, 107, 156, 0.3);">
+                                <span class="rounded-circle me-2 map-pulse-indicator" style="width: 8px; height: 8px; background-color: #2e6b9c;"></span>
+                                <span class="text-secondary font-monospace small" style="letter-spacing: 1px; color: #8a9bb0 !important;">LIVE OFFLINE NETWORK</span>
+                            </div>
+                        </div>
                     </div>
+
                 </div>
             </div>
             
@@ -281,11 +545,4 @@ include '../assets/includes/header.php';
         </div>
     </div>
 </section>
-
-
-<link rel="stylesheet" href="/apexx_marine/assets/leaflet/leaflet.css" />
-<script src="/apexx_marine/assets/leaflet/leaflet.js"></script>
-
-<script src="/apexx_marine/assets/js/aboutUs.js"></script>
-
 <?php include '../assets/includes/footer.php'; ?>

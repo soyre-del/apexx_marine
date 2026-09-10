@@ -388,7 +388,6 @@ try {
                                 <label class="form-label text-secondary small text-uppercase fw-bold">Currency</label>
                                 <select name="currency" class="form-select bg-black text-white border-secondary">
                                     <option value="USD">USD</option>
-                                    <option value="PHP">PHP</option>
                                 </select>
                             </div>
                         </div>
