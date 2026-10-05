@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
         const countrySelect = document.getElementById('countryCodeSelect');
         const phoneInput = document.getElementById('phoneNumberInput');
+        if (!countrySelect || !phoneInput) return;
 
         // Map country codes to their visual formats
         const phoneFormats = {
@@ -17,13 +18,15 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         // Listen for the dropdown changing
-        countrySelect.addEventListener('change', function() {
-            const selectedCode = this.value;
+        function updatePlaceholder() {
+            const selectedCode = countrySelect.value;
             // Update the placeholder with the correct format
             if (phoneFormats[selectedCode]) {
                 phoneInput.placeholder = phoneFormats[selectedCode];
             } else {
                 phoneInput.placeholder = "Enter phone number";
             }
-        });
+        }
+        countrySelect.addEventListener('change', updatePlaceholder);
+        updatePlaceholder();
     });

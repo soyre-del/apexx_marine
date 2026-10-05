@@ -380,7 +380,6 @@ include '../assets/includes/header.php';
                             </div>
 
                             <!-- JavaScript for Dynamic Phone Formatting -->
-                            <script src="/apexx_marine/assets/js/phoneformat.js"></script>
                             
                             <!-- 4. Scheduling & Urgency Row -->
                             <div class="row g-4 mb-4">

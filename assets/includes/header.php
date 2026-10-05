@@ -7,7 +7,6 @@ if (session_status() === PHP_SESSION_NONE) {
 $current_page = basename($_SERVER['PHP_SELF']);
 
 // Check if the user is authenticated by looking for their user_id in the session
-$is_logged_in = isset($_SESSION['user_id']); 
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -25,12 +24,6 @@ $is_logged_in = isset($_SESSION['user_id']);
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     
-    <!-- jsvectormap css -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsvectormap/dist/css/jsvectormap.min.css" />
-    
-    <!-- jsvectormap js -->
-    <script src="https://cdn.jsdelivr.net/npm/jsvectormap"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsvectormap/dist/maps/world.js"></script>
 </head>
 <body class="bg-brand-navy text-brand-steel">
 
@@ -43,7 +36,7 @@ $is_logged_in = isset($_SESSION['user_id']);
             <img src="/apexx_marine/assets/images/Logo.png" alt="Apex Marine" height="60">
         </a>
 
-        <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
         </button>
         
@@ -68,14 +61,14 @@ $is_logged_in = isset($_SESSION['user_id']);
                     
                     <!-- USER IS LOGGED IN: Smart Dashboard Routing -->
                     <li class="nav-item ms-lg-4 mt-3 mt-lg-0">
-                        <?php if ($_SESSION['role'] === 'client'): ?>
+                        <?php if (($_SESSION['role'] ?? '') === 'client'): ?>
                             <!-- CLIENT: Track My Vessel (UPDATED PATH) -->
                             <a class="btn btn-warning rounded-3 px-4 py-2 font-montserrat fw-bold text-uppercase text-dark d-inline-flex align-items-center transition-all shadow-sm" href="/apexx_marine/assets/client/status.php">
                                 <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
                                 Track My Vessel
                             </a>
 
-                        <?php elseif ($_SESSION['role'] === 'admin'): ?>
+                        <?php elseif (($_SESSION['role'] ?? '') === 'admin'): ?>
                             <!-- ADMIN: Command Center -->
                             <a class="btn btn-danger rounded-3 px-4 py-2 font-montserrat fw-bold text-uppercase d-inline-flex align-items-center transition-all shadow-sm" href="/apexx_marine/assets/admin/admin.php">
                                 <svg class="me-2" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
@@ -132,5 +125,3 @@ $is_logged_in = isset($_SESSION['user_id']);
 </nav>
     
     <script src="/apexx_marine/assets/js/dissolve.js"></script>
-</body>
-</html>

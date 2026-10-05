@@ -8,6 +8,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 }
 
 require __DIR__ . '/../../db/db.php'; 
+require_once __DIR__ . '/../includes/engineer_assignment.php';
 
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -19,12 +20,12 @@ if (empty($_SESSION['csrf_token'])) {
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['action'] === 'assign_engineer') {
     
     $submitted_token = $_POST['csrf_token'] ?? '';
-    if (!hash_equals($_SESSION['csrf_token'], $submitted_token)) {
+    if (!is_string($submitted_token) || !hash_equals($_SESSION['csrf_token'], $submitted_token)) {
         $_SESSION['sys_msg'] = "Security token validation failed.";
         $_SESSION['sys_msg_type'] = "danger";
     } else {
-        $request_id = (int) $_POST['request_id'];
-        $engineer_id = (int) $_POST['engineer_id'];
+        $request_id = (int) ($_POST['request_id'] ?? 0);
+        $engineer_id = (int) ($_POST['engineer_id'] ?? 0);
         $admin_id = $_SESSION['user_id'];
 
         if (empty($request_id) || empty($engineer_id)) {
@@ -32,34 +33,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
             $_SESSION['sys_msg_type'] = "warning";
         } else {
             try {
-                $pdo->beginTransaction();
-
-                // 1. PREVENT DUPLICATES: Check if request is already assigned
-                $check = $pdo->prepare("SELECT deployment_id FROM deployments WHERE request_id = :req_id LIMIT 1");
-                $check->execute([':req_id' => $request_id]);
-
-                if ($check->fetch()) {
-                    $pdo->rollBack();
-                    $_SESSION['sys_msg'] = "Duplicate Blocked: This request has already been assigned to an engineer.";
-                    $_SESSION['sys_msg_type'] = "warning";
-                } else {
-                    // 2. Perform dispatch insert
-                    $stmt1 = $pdo->prepare("INSERT INTO deployments (request_id, admin_id, engineer_id, deployment_status) VALUES (:req, :adm, :eng, 'en_route')");
-                    $stmt1->execute([':req' => $request_id, ':adm' => $admin_id, ':eng' => $engineer_id]);
-
-                    // 3. Update dispatch_requests status
-                    $stmt2 = $pdo->prepare("UPDATE dispatch_requests SET status = 'deployed' WHERE request_id = :req");
-                    $stmt2->execute([':req' => $request_id]);
-
-                    // 4. Update engineer status
-                    $stmt3 = $pdo->prepare("UPDATE engineer_profiles SET current_status = 'deployed' WHERE engineer_id = :eng");
-                    $stmt3->execute([':eng' => $engineer_id]);
-
-                    $pdo->commit();
-                    $_SESSION['sys_msg'] = "Deployment Authorized: Engineer dispatched to Request #$request_id.";
-                    $_SESSION['sys_msg_type'] = "success";
-                }
-
+                assignEngineerToRequest($pdo, $request_id, $engineer_id, (int)$admin_id);
+                $_SESSION['sys_msg'] = "Deployment Authorized: Matching specialist dispatched to Request #$request_id.";
+                $_SESSION['sys_msg_type'] = "success";
+            } catch (DomainException $e) {
+                $_SESSION['sys_msg'] = $e->getMessage();
+                $_SESSION['sys_msg_type'] = "warning";
             } catch (PDOException $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
@@ -134,7 +113,11 @@ try {
         SELECT u.user_id, u.full_name, ep.specialty 
         FROM users u 
         JOIN engineer_profiles ep ON u.user_id = ep.engineer_id 
-        WHERE ep.current_status = 'available' AND u.is_active = 1
+        WHERE ep.current_status = 'available' AND u.is_active = 1 AND u.role = 'engineer'
+          AND NOT EXISTS (
+              SELECT 1 FROM deployments dep
+              WHERE dep.engineer_id = ep.engineer_id AND dep.deployment_status <> 'completed'
+          )
         ORDER BY ep.specialty ASC, u.full_name ASC
     ";
     $available_engineers = $pdo->query($eng_sql)->fetchAll(PDO::FETCH_ASSOC);
@@ -189,7 +172,7 @@ try {
         <div class="row mb-4 align-items-center">
             <div class="col-lg-8">
                 <h2 class="font-montserrat fw-bolder text-white text-uppercase mb-1">Awaiting Deployment</h2>
-                <p class="text-secondary small">Review incoming dispatches and assign highly specialized personnel.</p>
+                <p class="text-secondary small">Engineers are matched automatically to each client's requested discipline. Choose a matching engineer to deploy.</p>
             </div>
         </div>
 
@@ -261,10 +244,28 @@ try {
                                 <!-- Footer: Command Buttons -->
                                 <div class="mt-auto pt-2 d-flex flex-column gap-2">
                                     <!-- Primary Action: Deploy -->
-                                    <button class="btn <?= $req['is_urgent'] ? 'btn-danger' : 'btn-info text-dark' ?> w-100 py-2 font-montserrat fw-bold text-uppercase fs-7 shadow-sm" 
-                                            onclick="openAssignmentModal(<?= $req['request_id']; ?>, '<?= htmlspecialchars(addslashes($req['vessel_name'])); ?>', '<?= htmlspecialchars(addslashes($req['service_type'])); ?>')">
-                                        Assign Personnel & Deploy
+                                    <button type="button" class="btn <?= $req['is_urgent'] ? 'btn-danger' : 'btn-info text-dark' ?> w-100 py-2 font-montserrat fw-bold text-uppercase fs-7 shadow-sm assignment-btn"
+                                            data-request="<?= (int)$req['request_id']; ?>" data-vessel="<?= htmlspecialchars($req['vessel_name'], ENT_QUOTES, 'UTF-8'); ?>" data-service="<?= htmlspecialchars($req['service_type'], ENT_QUOTES, 'UTF-8'); ?>">
+                                        View Matching Engineers & Deploy
                                     </button>
+                                    <template id="engineers-for-<?= (int)$req['request_id']; ?>">
+                                        <?php $matching_engineers = matchingAvailableEngineers($available_engineers, $req['service_type']); ?>
+                                        <?php if (empty($matching_engineers)): ?>
+                                            <div class="alert alert-warning small mb-0" role="status">No available engineers match this discipline. Deployment will be available when a matching specialist is available.</div>
+                                        <?php else: ?>
+                                            <?php foreach ($matching_engineers as $eng): ?>
+                                                <form method="POST" action="<?= htmlspecialchars($_SERVER['SCRIPT_NAME'], ENT_QUOTES, 'UTF-8'); ?>" class="border border-secondary border-opacity-25 rounded-3 p-3 mb-3">
+                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <input type="hidden" name="action" value="assign_engineer">
+                                                    <input type="hidden" name="request_id" value="<?= (int)$req['request_id']; ?>">
+                                                    <input type="hidden" name="engineer_id" value="<?= (int)$eng['user_id']; ?>">
+                                                    <strong class="text-white d-block"><?= htmlspecialchars($eng['full_name'], ENT_QUOTES, 'UTF-8'); ?></strong>
+                                                    <span class="text-info small d-block mb-3"><?= htmlspecialchars($eng['specialty'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                                    <button type="submit" class="btn btn-warning w-100 fw-bold">Deploy <?= htmlspecialchars($eng['full_name'], ENT_QUOTES, 'UTF-8'); ?></button>
+                                                </form>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </template>
                                     
                                     <!-- Secondary Actions: Terminate & Finish -->
                                     <div class="d-flex gap-2">
@@ -311,31 +312,7 @@ try {
                 <div class="modal-body p-4">
                     <p class="small text-secondary mb-4">You are assigning an engineer to <strong class="text-white" id="modalVesselName"></strong>. The requested discipline is <strong class="text-warning" id="modalReqSpecialty"></strong>.</p>
                     
-                    <form action="<?= htmlspecialchars($_SERVER['SCRIPT_NAME']); ?>" method="POST">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
-                        <input type="hidden" name="action" value="assign_engineer">
-                        <input type="hidden" name="request_id" id="modalRequestId" value="">
-                        
-                        <div class="mb-4">
-                            <label class="form-label text-brand-steel small text-uppercase fw-bold letter-spacing-wide">Select Available Engineer</label>
-                            
-                            <?php if (empty($available_engineers)): ?>
-                                <div class="alert alert-danger small p-2 text-center">NO ENGINEERS AVAILABLE ON ROSTER</div>
-                            <?php else: ?>
-                                <select name="engineer_id" required class="form-select bg-dark border-secondary text-white shadow-none" size="6">
-                                    <?php foreach ($available_engineers as $eng): ?>
-                                        <option value="<?= $eng['user_id']; ?>" class="p-2 border-bottom border-secondary border-opacity-25">
-                                            <?= htmlspecialchars($eng['full_name']); ?> — [ <?= htmlspecialchars($eng['specialty']); ?> ]
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-warning w-100 py-3 rounded-3 font-montserrat fw-bold text-uppercase shadow-sm text-dark" <?= empty($available_engineers) ? 'disabled' : '' ?>>
-                            Confirm Dispatch Code
-                        </button>
-                    </form>
+                    <div id="matchingEngineers" aria-live="polite"></div>
                 </div>
             </div>
         </div>
@@ -374,11 +351,12 @@ try {
     <script src="/apexx_marine/assets/js/bootstrap.bundle.min.js"></script>
     <script>
         function openAssignmentModal(reqId, vesselName, specialty) {
-            document.getElementById('modalRequestId').value = reqId;
-            document.getElementById('modalVesselName').innerText = vesselName;
-            document.getElementById('modalReqSpecialty').innerText = specialty;
+            document.getElementById('modalVesselName').textContent = vesselName;
+            document.getElementById('modalReqSpecialty').textContent = specialty;
+            const template = document.getElementById('engineers-for-' + reqId);
+            document.getElementById('matchingEngineers').replaceChildren(template.content.cloneNode(true));
             
-            var assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
+            const assignModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('assignModal'));
             assignModal.show();
         }
 
@@ -386,6 +364,11 @@ try {
         let taskActionModalInstance = null;
 
         document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.assignment-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    openAssignmentModal(this.dataset.request, this.dataset.vessel, this.dataset.service);
+                });
+            });
             if (document.getElementById('taskActionModal')) {
                 taskActionModalInstance = new bootstrap.Modal(document.getElementById('taskActionModal'));
             }

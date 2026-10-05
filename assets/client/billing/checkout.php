@@ -1,27 +1,41 @@
 <?php
 session_start();
-require_once $_SERVER['DOCUMENT_ROOT'] . '/apexx_marine/db/db.php';
 
 // Ensure client is logged in
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'client') {
     header("Location: /apexx_marine/assets/includes/login.php");
     exit();
+}
+require_once __DIR__ . '/../../../db/db.php';
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 $invoice_id = isset($_GET['invoice_id']) ? (int)$_GET['invoice_id'] : 0;
 
 // Handle the Form Submission (The "Payment")
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $inv_id = (int)$_POST['invoice_id'];
-    $method = htmlspecialchars($_POST['payment_method']);
+    $token = $_POST['csrf_token'] ?? '';
+    if (!is_string($token) || !hash_equals($_SESSION['csrf_token'], $token)) {
+        http_response_code(403);
+        exit('Invalid security token. Reload checkout and try again.');
+    }
+    $inv_id = filter_var($_POST['invoice_id'] ?? null, FILTER_VALIDATE_INT);
+    $method = $_POST['payment_method'] ?? '';
+    $reference = $_POST['reference_number'] ?? '';
+    if (!$inv_id || $inv_id < 1 || !in_array($method, ['Bank Transfer', 'Credit Card', 'GCash', 'Cash'], true)
+        || !is_string($reference) || strlen(trim($reference)) > 100) {
+        http_response_code(400);
+        exit('Invalid payment details.');
+    }
     // Generate a fake receipt/reference number if they didn't provide one
-    $ref_num = !empty($_POST['reference_number']) ? htmlspecialchars($_POST['reference_number']) : 'TXN-' . strtoupper(uniqid());
+    $ref_num = trim($reference) !== '' ? trim($reference) : 'TXN-' . strtoupper(bin2hex(random_bytes(12)));
 
     // Update the database to mark as paid
     $stmt = $pdo->prepare("
         UPDATE invoices 
         SET payment_status = 'paid', payment_method = :method, reference_number = :ref 
-        WHERE invoice_id = :inv_id AND client_id = :client_id
+        WHERE invoice_id = :inv_id AND client_id = :client_id AND payment_status = 'unpaid'
     ");
     $stmt->execute([
         ':method' => $method,
@@ -29,9 +43,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ':inv_id' => $inv_id,
         ':client_id' => $_SESSION['user_id']
     ]);
+    if ($stmt->rowCount() !== 1) {
+        http_response_code(409);
+        exit('Invoice not found or already paid.');
+    }
 
     // Redirect to success page
-    header("Location: /apexx_marine/assets/client/payment_success.php?ref=" . $ref_num);
+    header("Location: /apexx_marine/assets/client/payment_success.php?ref=" . rawurlencode($ref_num));
     exit();
 }
 
@@ -46,7 +64,8 @@ $stmt->execute([':inv_id' => $invoice_id, ':client_id' => $_SESSION['user_id']])
 $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$invoice) {
-    die("<div style='color:white; background:#111; padding:20px; font-family:sans-serif;'>Invoice not found or already paid. <a href='status.php' style='color:#0dcaf0;'>Return to Dashboard</a></div>");
+    http_response_code(404);
+    die("<div style='color:white; background:#111; padding:20px; font-family:sans-serif;'>Invoice not found or already paid. <a href='/apexx_marine/assets/client/status.php' style='color:#0dcaf0;'>Return to Dashboard</a></div>");
 }
 ?>
 
@@ -76,6 +95,7 @@ if (!$invoice) {
             </div>
 
             <form method="POST" action="checkout.php">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
                 <input type="hidden" name="invoice_id" value="<?= $invoice_id; ?>">
                 
                 <div class="mb-3">

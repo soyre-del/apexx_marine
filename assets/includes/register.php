@@ -4,7 +4,7 @@ session_start();
 // Connect to the Database
 require __DIR__ . '/../../db/db.php';
 
-// CSRF Generation
+// CSRF Token Generation
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -12,92 +12,150 @@ if (empty($_SESSION['csrf_token'])) {
 $errors = [];
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    
+
     // CSRF Token Validation
     $submitted_token = $_POST['csrf_token'] ?? '';
-    if (!hash_equals($_SESSION['csrf_token'], $submitted_token)) {
+
+    if (
+        empty($_SESSION['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $submitted_token)
+    ) {
         $errors[] = "Security token validation failed. Unauthorized request intercepted.";
     } else {
-        // Collect & validate input
+
+        // Collect & Sanitize Input
         $name = trim($_POST['username'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $confirm_password = $_POST['confirm_password'] ?? '';
 
-        // Basic Formatting Validation
+        // Basic Input Validation
         if (empty($name)) {
             $errors[] = "Personnel Name is required.";
+        } elseif (strlen($name) > 100) {
+            $errors[] = "Personnel Name must not exceed 100 characters.";
         }
-        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+
+        if (empty($email)) {
+            $errors[] = "Secure Email is required.";
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors[] = "Enter a valid, secure email address.";
+        } elseif (strlen($email) > 100) {
+            $errors[] = "Secure Email must not exceed 100 characters.";
         }
-        
+
         // Strict Password Complexity Validation
         if (empty($password)) {
             $errors[] = "Access Code (Password) is required.";
         } elseif (strlen($password) < 8) {
             $errors[] = "Access Code must be at least 8 characters.";
-        } elseif (!preg_match('/[A-Za-z]/', $password) || !preg_match('/[0-9]/', $password) || !preg_match('/[\W_]/', $password)) {
+        } elseif (
+            !preg_match('/[A-Za-z]/', $password) ||
+            !preg_match('/[0-9]/', $password) ||
+            !preg_match('/[\W_]/', $password)
+        ) {
             $errors[] = "Access Code must contain at least one letter, one number, and one special character.";
         } elseif ($password !== $confirm_password) {
             $errors[] = "Access Codes do not match.";
         }
 
-        // Duplicate Verification in the Database
+        // Database Duplicate Verification
         if (empty($errors)) {
             try {
-                // Check if the Email is already taken
-                $stmtEmail = $pdo->prepare("SELECT user_id FROM users WHERE email = :email LIMIT 1");
-                $stmtEmail->execute([':email' => $email]);
+
+                // Check if Email is already registered
+                $stmtEmail = $pdo->prepare(
+                    "SELECT user_id 
+                     FROM users 
+                     WHERE email = :email 
+                     LIMIT 1"
+                );
+
+                $stmtEmail->execute([
+                    ':email' => $email
+                ]);
+
                 if ($stmtEmail->fetch()) {
                     $errors[] = "This Secure Email is already registered in the system.";
                 }
 
-                // Check if the Name is already taken
-                $stmtName = $pdo->prepare("SELECT user_id FROM users WHERE full_name = :name LIMIT 1");
-                $stmtName->execute([':name' => $name]);
+                // Check if Personnel Name is already registered
+                $stmtName = $pdo->prepare(
+                    "SELECT user_id 
+                     FROM users 
+                     WHERE full_name = :name 
+                     LIMIT 1"
+                );
+
+                $stmtName->execute([
+                    ':name' => $name
+                ]);
+
                 if ($stmtName->fetch()) {
                     $errors[] = "This Personnel Name is already assigned to an existing operative.";
                 }
 
             } catch (PDOException $e) {
-                $errors[] = "Database Error: " . $e->getMessage();
+
+                // Do not expose database details to users
+                $errors[] = "Database Error: Unable to verify registration information.";
             }
         }
 
-        // Direct Registration Processing (Verification Removed)
+        // Registration Processing
         if (empty($errors)) {
             try {
+
+                // Start Database Transaction
                 $pdo->beginTransaction();
 
-                // Hash the complex password
-                $hashed_password = password_hash($password, PASSWORD_DEFAULT); 
-                
-                // Insert the new Client into the database
-                $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password_hash, role, is_active) VALUES (:name, :email, :pass, 'client', 1)");
+                // Securely Hash the Password
+                $hashed_password = password_hash(
+                    $password,
+                    PASSWORD_DEFAULT
+                );
+
+                // Insert New Client
+                $stmt = $pdo->prepare(
+                    "INSERT INTO users 
+                    (full_name, email, password_hash, role, is_active) 
+                    VALUES 
+                    (:name, :email, :pass, 'client', 1)"
+                );
+
                 $stmt->execute([
                     ':name'  => $name,
                     ':email' => $email,
                     ':pass'  => $hashed_password
                 ]);
 
+                // Confirm Transaction
                 $pdo->commit();
-                
-                // Clear CSRF so it resets on the next page
+
+                // Clear CSRF Token
                 unset($_SESSION['csrf_token']);
-                
-                // Pass a success message to the login screen
-                $_SESSION['sys_msg'] = "Registration successful. You may now authenticate your session.";
+
+                // Send Success Message
+                $_SESSION['sys_msg'] =
+                    "Registration successful. You may now authenticate your session.";
+
                 $_SESSION['sys_msg_type'] = "success";
-                
-                header("Location: /apexx_marine/assets/includes/login.php");
+
+                // Redirect to Login
+                header(
+                    "Location: /apexx_marine/assets/includes/login.php"
+                );
                 exit();
-                
+
             } catch (PDOException $e) {
+
+                // Roll Back Transaction if Something Fails
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
-                $errors[] = "System Error: Unable to complete registration.";
+
+                $errors[] =
+                    "System Error: Unable to complete registration.";
             }
         }
     }

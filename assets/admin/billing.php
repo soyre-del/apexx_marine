@@ -50,21 +50,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 2. Update Payment Status Manually (e.g., mark as Paid for offline/cash)
     if (isset($_POST['action']) && $_POST['action'] === 'update_status') {
         $invoice_id = (int)$_POST['invoice_id'];
-        $status = htmlspecialchars($_POST['payment_status']);
+        $status = 'paid';
         $method = !empty($_POST['payment_method']) ? htmlspecialchars($_POST['payment_method']) : 'Manual Admin Override';
 
         try {
             $updStmt = $pdo->prepare("
                 UPDATE invoices 
                 SET payment_status = :status, payment_method = :method 
-                WHERE invoice_id = :inv_id
+                WHERE invoice_id = :inv_id AND payment_status <> 'paid'
             ");
             $updStmt->execute([
                 ':status' => $status,
                 ':method' => $method,
                 ':inv_id' => $invoice_id
             ]);
-            $message = "Invoice INV-" . str_pad($invoice_id, 5, '0', STR_PAD_LEFT) . " updated to " . strtoupper($status);
+
+            if ($updStmt->rowCount() > 0) {
+                $message = "Invoice INV-" . str_pad($invoice_id, 5, '0', STR_PAD_LEFT) . " updated to PAID";
+            } else {
+                $error = "This invoice is already paid and cannot be changed.";
+            }
         } catch (PDOException $e) {
             $error = "Failed to update status: " . $e->getMessage();
         }
@@ -323,22 +328,19 @@ try {
                                     <?php endif; ?>
                                 </td>
                                 <td class="px-4 text-center">
-                                    <!-- Action Dropdown for Manual Overrides -->
+                                    <!-- Payment status is intentionally irreversible once paid. -->
                                     <form method="POST" action="billing.php" class="d-inline">
                                         <input type="hidden" name="action" value="update_status">
                                         <input type="hidden" name="invoice_id" value="<?= $inv['invoice_id']; ?>">
                                         
-                                        <?php if ($inv['payment_status'] === 'unpaid'): ?>
+                                        <?php if ($inv['payment_status'] !== 'paid'): ?>
                                             <input type="hidden" name="payment_status" value="paid">
                                             <input type="hidden" name="payment_method" value="Cash / Manual Admin">
                                             <button type="submit" class="btn btn-sm btn-outline-success font-montserrat fw-bold text-uppercase py-1 px-2" style="font-size: 0.7rem;">
                                                 Mark Paid
                                             </button>
                                         <?php else: ?>
-                                            <input type="hidden" name="payment_status" value="unpaid">
-                                            <button type="submit" class="btn btn-sm btn-outline-warning font-montserrat fw-bold text-uppercase py-1 px-2" style="font-size: 0.7rem;">
-                                                Mark Unpaid
-                                            </button>
+                                            <span class="text-success small fw-bold text-uppercase">Locked: Paid</span>
                                         <?php endif; ?>
                                     </form>
                                 </td>

@@ -1,12 +1,24 @@
 <?php
 session_start();
-if (!isset($_GET['ref'])) {
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'client') {
+    header('Location: /apexx_marine/assets/includes/login.php');
+    exit();
+}
+if (!isset($_GET['ref']) || !is_string($_GET['ref']) || $_GET['ref'] === '') {
     // Redirects back to the billing dashboard if the page is accessed directly without a reference
     header("Location: /apexx_marine/assets/client/billing/billing.php");
     exit();
 }
 
-$raw_ref = htmlspecialchars($_GET['ref']);
+require_once __DIR__ . '/../../db/db.php';
+$stmt = $pdo->prepare("SELECT reference_number FROM invoices WHERE client_id = :client_id AND reference_number = :ref AND payment_status = 'paid' LIMIT 1");
+$stmt->execute([':client_id' => $_SESSION['user_id'], ':ref' => $_GET['ref']]);
+$receipt = $stmt->fetch();
+if (!$receipt) {
+    http_response_code(404);
+    exit('Payment receipt not found.');
+}
+$raw_ref = htmlspecialchars($receipt['reference_number'], ENT_QUOTES, 'UTF-8');
 
 // Transform a plain number (e.g., "1") into a professional format (e.g., "APX-TXN-000001")
 if (is_numeric($raw_ref)) {
@@ -15,7 +27,7 @@ if (is_numeric($raw_ref)) {
     $formatted_ref = $raw_ref;
 }
 
-// Generate the current date and time for the receipt
+// This is the receipt generation time; the schema does not store payment time.
 $current_date = date('F j, Y, g:i A');
 ?>
 <!DOCTYPE html>
@@ -53,7 +65,7 @@ $current_date = date('F j, Y, g:i A');
         <div class="bg-dark border border-secondary border-opacity-25 p-4 rounded text-start mt-4 mb-4 shadow-sm">
             
             <div class="d-flex justify-content-between mb-3 border-bottom border-secondary border-opacity-25 pb-2">
-                <span class="text-uppercase text-secondary fw-bold" style="font-size: 0.8rem;">Date & Time</span>
+                <span class="text-uppercase text-secondary fw-bold" style="font-size: 0.8rem;">Receipt Generated</span>
                 <span class="fw-bold" style="font-size: 0.85rem;"><?= $current_date; ?></span>
             </div>
             

@@ -7,16 +7,28 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'client') {
     exit();
 }
 
-require __DIR__ . '/../../db/db.php';
+require __DIR__ . '/../../../db/db.php';
 
 $client_id = $_SESSION['user_id'];
 $message = '';
 $error = '';
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
 // Handle Simulated Client Payment
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'pay_invoice') {
-    $invoice_id = (int)$_POST['invoice_id'];
-    $payment_method = htmlspecialchars($_POST['payment_method']);
+    $token = $_POST['csrf_token'] ?? '';
+    if (!is_string($token) || !hash_equals($_SESSION['csrf_token'], $token)) {
+        http_response_code(403);
+        exit('Invalid security token. Reload billing and try again.');
+    }
+    $invoice_id = filter_var($_POST['invoice_id'] ?? null, FILTER_VALIDATE_INT);
+    $payment_method = $_POST['payment_method'] ?? '';
+    if (!$invoice_id || $invoice_id < 1 || !in_array($payment_method, ['Credit Card (Stripe)', 'PayPal', 'Bank Wire Transfer'], true)) {
+        http_response_code(400);
+        exit('Invalid payment details.');
+    }
     
     // Generate a mock reference number for the receipt
     $reference_no = 'TXN-' . strtoupper(substr(md5(uniqid()), 0, 10));
@@ -163,6 +175,7 @@ try {
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <form method="POST" action="billing.php">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8'); ?>">
                                 <div class="modal-body font-cascadia">
                                     <input type="hidden" name="action" value="pay_invoice">
                                     <input type="hidden" name="invoice_id" value="<?= $inv['invoice_id']; ?>">

@@ -31,7 +31,8 @@
         
     </div>
 
-    <script src="assets/js/bootstrap.bundle.min.js"></script>
+    <script src="/apexx_marine/assets/js/bootstrap.bundle.min.js"></script>
+    <script src="/apexx_marine/assets/js/phoneformat.js"></script>
 </footer>
 </body>
 </html>

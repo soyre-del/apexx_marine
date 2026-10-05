@@ -36,6 +36,7 @@ Typography & Base Colors
 .bg-brand-navy { background-color: var(--brand-navy) !important; }
 .bg-brand-dark { background-color: var(--brand-dark) !important; }
 .bg-brand-ocean { background-color: var(--brand-ocean) !important; }
+.bg-brand-caution { background-color: var(--brand-caution) !important; }
 
 /* Sizing & Spacing */
 .letter-spacing-wide { letter-spacing: 0.1em; }
@@ -152,9 +153,11 @@ Typography & Base Colors
 }
 .form-floating-dark > .form-control:focus ~ label,
 .form-floating-dark > .form-control:not(:placeholder-shown) ~ label,
-.form-floating-dark > .form-select:focus ~ label,
-.form-floating-dark > .form-select:not(:empty) ~ label {
+.form-floating-dark > .form-select ~ label {
     color: var(--brand-blue);
+    background-color: transparent !important;
+}
+.form-floating-dark > label::after {
     background-color: transparent !important;
 }
 .form-floating-dark .form-select {
@@ -312,7 +315,7 @@ Typography & Base Colors
 ----------------------------------- */
 .bg-grid-pattern {
     background-image: linear-gradient(to right, rgba(138, 155, 168, 0.04) 1px, transparent 1px),
-                      linear-gradient(to bottom, rgba(138, 155, 168, 0.04) 1px, transparent 1px);
+                    linear-gradient(to bottom, rgba(138, 155, 168, 0.04) 1px, transparent 1px);
     background-size: 40px 40px;
 }
 
@@ -325,6 +328,7 @@ Typography & Base Colors
     border-radius: 2rem !important;
 }
 
+.text-gradient-blue,
 .text-gradient-ocean {
     background: linear-gradient(to right, var(--brand-ocean), var(--brand-blue));
     -webkit-background-clip: text;

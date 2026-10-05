@@ -17,7 +17,7 @@ unset($_SESSION['sys_msg'], $_SESSION['sys_msg_type']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_logged_in) {
     
-    // CSRF Token Validation
+    // Cross -Site  Request Forgery (CSRF) Protection
     $submitted_token = $_POST['csrf_token'] ?? '';
     if (!hash_equals($_SESSION['csrf_token'], $submitted_token)) {
         $message = "Security token validation failed. Unauthorized request intercepted.";
@@ -68,7 +68,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_logged_in) {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
